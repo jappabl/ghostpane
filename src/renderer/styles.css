@@ -26,7 +26,7 @@ html, body {
   -webkit-app-region: drag; /* grab the bar to move the overlay */
 }
 /* interactive controls must stay clickable, not draggable */
-.ask, .iconbtn, .model { -webkit-app-region: no-drag; }
+.ask, .iconbtn, .model, .provider { -webkit-app-region: no-drag; }
 
 /* brand / status dot */
 .dot {
@@ -66,14 +66,15 @@ html, body {
 .sep { width: 1px; height: 20px; background: rgba(255, 255, 255, 0.12); }
 
 /* model picker */
-.model {
+.model, .provider {
   appearance: none; -webkit-appearance: none;
   background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.09);
   color: rgba(255, 255, 255, 0.78); border-radius: 8px; padding: 5px 8px;
   font-size: 12px; cursor: pointer; outline: none;
 }
-.model:hover { background: rgba(255, 255, 255, 0.12); }
-.model option { color: #111; }
+.model:hover, .provider:hover { background: rgba(255, 255, 255, 0.12); }
+.model option, .provider option { color: #111; }
+.provider { max-width: 86px; }
 
 /* ---- answer panel ---- */
 .panel {

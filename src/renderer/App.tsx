@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import { CameraIcon } from './components/Icons'
-import { MODELS, type AppConfig } from '../shared/ipc'
+import type { AppConfig } from '../shared/ipc'
+import { PROVIDERS, modelsForProvider } from '../shared/providers'
 
 // Cap the overlay at ~85% of the screen; taller answers scroll inside.
 const MAX_H = Math.floor((window.screen?.availHeight ?? 900) * 0.85)
@@ -76,12 +77,24 @@ export function App() {
         />
         <div className="bar-actions">
           <select
+            className="provider"
+            title="Provider"
+            value={config.provider}
+            onChange={(e) => window.ghost.setProvider(e.target.value as AppConfig['provider'])}
+          >
+            {PROVIDERS.map((provider) => (
+              <option key={provider.id} value={provider.id}>{provider.label}</option>
+            ))}
+          </select>
+          <select
             className="model"
             title="Model"
             value={config.model}
             onChange={(e) => window.ghost.setModel(e.target.value)}
           >
-            {MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+            {modelsForProvider(config.provider).map((m) => (
+              <option key={m.id} value={m.id}>{m.label}</option>
+            ))}
           </select>
           <span className="sep" />
           <button className="iconbtn" title="Screenshot & ask (⌘⏎)" onClick={() => beginAsk(true)}>
@@ -100,7 +113,14 @@ export function App() {
                   <div className="error-log">Logs: {config.logPath || '~/Library/Logs/Ghostpane'} · press ⌘⇧L to open</div>
                 </div>
               : answer
-                ? <Markdown>{answer}</Markdown>
+                ? <Markdown components={{
+                    a: ({ href, children }) => (
+                      <a href="#" onClick={(event) => {
+                        event.preventDefault()
+                        if (href) window.ghost.openExternal(href)
+                      }}>{children}</a>
+                    )
+                  }}>{answer}</Markdown>
                 : <div className="thinking"><span className="d" /><span className="d" /><span className="d" /> {status}</div>}
           </div>
           <div className="panel-foot">

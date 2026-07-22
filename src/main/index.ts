@@ -3,7 +3,8 @@ import { join } from 'path'
 import { createOverlay, applyFollowBehavior } from './overlay-window'
 import { registerShortcuts } from './register-shortcuts'
 import { captureBehindOverlay, screenPermission, warmUpCapture } from './screenshot'
-import { ask, resolveClaude } from './claude'
+import { ask as askClaude, resolveClaude } from './claude'
+import { askOpenAI, resolveCodex } from './openai'
 import { initLogger, getLogPath, getLogDir, log } from './logger'
 import { getSettings, setModel, setProvider } from './settings'
 import { CHANNELS, type MainEvent, type AppConfig } from '../shared/ipc'
@@ -17,6 +18,7 @@ import {
   parseResize
 } from './ipc-validation'
 import { isExternalHttpsUrl } from './navigation'
+import { routeAsk } from './provider-router'
 
 let win: BrowserWindow | null = null
 let clickThrough = false
@@ -64,6 +66,7 @@ function pushConfig() {
 
 function runAsk(prompt: string, imagePath?: string) {
   busy = true
+  const settings = getSettings()
   const owned = new OwnedPaths()
   activeOwners.add(owned)
   if (imagePath) owned.add(imagePath)
@@ -73,11 +76,14 @@ function runAsk(prompt: string, imagePath?: string) {
     void owned.cleanup()
   }
   reveal() // ensure the answer/error is actually visible
-  send(CHANNELS.status, imagePath ? '📸 Reading your screen…' : '💭 Thinking…')
-  ask({
+  const providerLabel = settings.provider === 'openai' ? 'ChatGPT' : 'Claude'
+  send(CHANNELS.status, imagePath
+    ? `📸 Asking ${providerLabel} about your screen…`
+    : `💭 Asking ${providerLabel}…`)
+  routeAsk(settings.provider, { openai: askOpenAI, claude: askClaude }, {
     prompt: prompt || 'Read the question or content on screen and answer concisely.',
     imagePath,
-    model: getSettings().models[getSettings().provider],
+    model: settings.models[settings.provider],
     onChunk: (text) => send(CHANNELS.answerChunk, { text }),
     onDone: () => { finish(); send(CHANNELS.answerDone) },
     onError: (message) => { finish(); log('error', 'ask error surfaced to UI', { message }); send(CHANNELS.answerError, { message }) },
@@ -141,6 +147,8 @@ app.whenReady().then(() => {
   if (translocated) log('warn', 'APP IS TRANSLOCATED — move Ghostpane to /Applications; permissions will not stick until you do')
   const claude = resolveClaude()
   log(claude.found ? 'info' : 'warn', 'claude resolution', { bin: claude.bin, found: claude.found })
+  const codex = resolveCodex()
+  log(codex.found ? 'info' : 'warn', 'codex resolution', { bin: codex.bin, found: codex.found })
   log('info', 'screen recording permission', { status: screenPermission() })
   warmUpCapture() // prime ScreenCaptureKit so the first ⌘⏎ works immediately
 
