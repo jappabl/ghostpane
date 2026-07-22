@@ -6,11 +6,14 @@ import { join } from 'path'
 // required for a dock-hidden (accessory) app to keep joining all Spaces without
 // macOS flipping its activation policy. Safe to call repeatedly (re-assert on show).
 export function applyFollowBehavior(win: BrowserWindow): void {
-  win.setAlwaysOnTop(true, 'screen-saver')
+  win.setAlwaysOnTop(true, 'screen-saver', 1)
+  // NOTE: the option is `visibleOnFullScreen` — NOT `visibleOnFullScreenWorkspaces`.
+  // Passing the wrong key (and casting past TS) silently disabled over-fullscreen
+  // visibility, which is why the overlay never appeared over full-screen apps.
   win.setVisibleOnAllWorkspaces(true, {
-    visibleOnFullScreenWorkspaces: true,
+    visibleOnFullScreen: true,
     skipTransformProcessType: true
-  } as Electron.VisibleOnAllWorkspacesOptions)
+  })
 }
 
 export function createOverlay(preloadPath: string, loadUrl: string | null): BrowserWindow {

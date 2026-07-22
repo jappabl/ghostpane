@@ -1,14 +1,15 @@
-# Ghostpane v0.1.5
+# Ghostpane v0.1.6
 
 A translucent AI overlay that's **hidden from screen recording & screen
 sharing**, powered by your own Claude Pro/Max subscription (no API key). It grows
 to fit each answer and tucks away with a hotkey.
 
-### New in v0.1.5
-- **Now shows over full-screen apps.** The overlay is a macOS *panel* window
-  (`NSWindowStyleMaskNonactivatingPanel`), so it floats over other apps'
-  full-screen Spaces like Spotlight — a normal window can't do that. Combined with
-  v0.1.4's follow-across-Spaces, it now stays with you everywhere.
+### New in v0.1.6
+- **Actually shows over full-screen apps now.** v0.1.5 made it a panel window but
+  the "visible above full-screen" flag was passed under the wrong key
+  (`visibleOnFullScreenWorkspaces` instead of `visibleOnFullScreen`), so it was
+  never set. Fixed — panel window + the correct flag = it floats over full-screen
+  apps like Spotlight.
 
 ### Earlier (v0.1.4)
 - **Follows you across Spaces** — stays with you across desktop/Space switches
