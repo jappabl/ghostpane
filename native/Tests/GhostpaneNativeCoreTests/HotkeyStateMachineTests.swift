@@ -9,7 +9,7 @@ final class HotkeyStateMachineTests: XCTestCase {
         state.keyDown(at: .zero)
         state.keyUp(at: .milliseconds(120))
 
-        XCTAssertEqual(events, [.tap])
+        XCTAssertEqual(events, [.pressBegan, .tap])
     }
 
     func testHoldIgnoresAutorepeatAndFinishesOnce() {
@@ -22,7 +22,7 @@ final class HotkeyStateMachineTests: XCTestCase {
         state.keyUp(at: .milliseconds(800))
         state.keyUp(at: .milliseconds(900))
 
-        XCTAssertEqual(events, [.holdStarted, .holdFinished])
+        XCTAssertEqual(events, [.pressBegan, .holdStarted, .holdFinished])
     }
 
     func testCancelledPressEmitsCancellationOnlyAfterHoldStarts() {
@@ -33,6 +33,6 @@ final class HotkeyStateMachineTests: XCTestCase {
         state.thresholdReached(at: .milliseconds(350))
         state.cancel()
 
-        XCTAssertEqual(events, [.holdStarted, .holdCancelled])
+        XCTAssertEqual(events, [.pressBegan, .holdStarted, .holdCancelled])
     }
 }

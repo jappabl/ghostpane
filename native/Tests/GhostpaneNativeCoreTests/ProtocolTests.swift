@@ -24,4 +24,12 @@ final class ProtocolTests: XCTestCase {
         XCTAssertFalse(text.contains(".caf"))
         XCTAssertFalse(text.contains(".m4a"))
     }
+
+    func testHelperCommandRequiresProtocolVersionOne() throws {
+        let valid = Data(#"{"protocolVersion":1,"type":"request-permissions"}"#.utf8)
+        let future = Data(#"{"protocolVersion":2,"type":"request-permissions"}"#.utf8)
+
+        XCTAssertTrue(try JSONDecoder().decode(HelperCommand.self, from: valid).isSupported)
+        XCTAssertFalse(try JSONDecoder().decode(HelperCommand.self, from: future).isSupported)
+    }
 }

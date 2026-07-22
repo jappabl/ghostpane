@@ -1,5 +1,17 @@
 import Foundation
 
+public struct HelperCommand: Codable, Equatable, Sendable {
+    public let protocolVersion: Int
+    public let type: String
+
+    public init(protocolVersion: Int = 1, type: String) {
+        self.protocolVersion = protocolVersion
+        self.type = type
+    }
+
+    public var isSupported: Bool { protocolVersion == 1 }
+}
+
 public struct HelperEvent: Codable, Equatable, Sendable {
     public let protocolVersion: Int
     public let type: String
@@ -48,6 +60,7 @@ public struct HelperEvent: Codable, Equatable, Sendable {
         )
     }
     public static func holdCancelled() -> HelperEvent { HelperEvent(type: "hold-cancelled") }
+    public static func transcribing() -> HelperEvent { HelperEvent(type: "transcribing") }
     public static func error(_ message: String) -> HelperEvent {
         HelperEvent(type: "error", message: message)
     }

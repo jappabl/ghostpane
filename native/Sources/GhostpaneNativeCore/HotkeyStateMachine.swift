@@ -1,6 +1,7 @@
 import Foundation
 
 public enum HotkeyAction: Equatable, Sendable {
+    case pressBegan
     case tap
     case holdStarted
     case holdFinished
@@ -28,10 +29,13 @@ public final class HotkeyStateMachine: @unchecked Sendable {
     }
 
     public func keyDown(at time: Duration) {
+        var began = false
         lock.withLock {
             guard case .idle = state else { return }
             state = .pressed(startedAt: time)
+            began = true
         }
+        if began { emit(.pressBegan) }
     }
 
     public func thresholdReached(at time: Duration) {
