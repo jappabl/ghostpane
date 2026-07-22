@@ -1,21 +1,27 @@
 # Ghostpane smoke test (macOS)
 
-Run: `npm run dev` (or launch the installed `.dmg` build). Ensure `claude login`
-has been run first.
+Run: `npm run dev` (or launch the installed `.dmg` build). Ensure `codex login`
+has been run first. Held audio requires macOS 14 or newer.
 
 | # | Check | Pass? |
 |---|-------|-------|
 | 1 | Overlay is visible to you; NOT in the Dock; NOT in Cmd+Tab. | |
 | 2 | Start a Zoom "Share Screen" (or Google Meet / Teams) → the overlay is **absent** in the shared view while you still see it. | |
 | 3 | Start a QuickTime "New Screen Recording" → overlay absent in the recording (best-effort on macOS; note the result). | |
-| 4 | Type a question, press Enter → a streamed Claude answer appears token-by-token. | |
-| 5 | Press ⌘⏎ over a visible on-screen question → the screenshot is answered. | |
-| 6 | Press ⌘⇧\ → clicks pass through the overlay to the app beneath. Press again to turn off. | |
-| 7 | With the overlay shown, type into an editor beneath it → keystrokes land in the editor (overlay did not steal focus). | |
-| 8 | The window grows to fit a long answer, then shrinks back on the next question. | |
+| 4 | With ChatGPT selected, type a question and press Enter → an answer appears. Switch to Claude and repeat if Claude is configured. | |
+| 5 | Tap ⌘⏎ over a visible on-screen question → screenshot-only answer; no audio recording indicator. | |
+| 6 | Hold ⌘⏎ while speaking with no system audio → red recording indicator, microphone transcript context, fresh screenshot answer. | |
+| 7 | Hold ⌘⏎ while system audio plays without speaking → system transcript context and answer. | |
+| 8 | Hold ⌘⏎ while speaking over system audio → both sources are labeled separately. | |
+| 9 | With Accessibility granted, deny Microphone or Speech Recognition → tap still screenshots and hold gives an actionable permission error. | |
+| 10 | Deny Accessibility → the fallback shortcut still screenshots and opens permission setup on first use. | |
+| 11 | After a completed, cancelled, and failed hold, no `ghostpane-audio-*` directories remain in the system temporary directory. | |
+| 12 | Press ⌘⇧\ → clicks pass through the overlay to the app beneath. Press again to turn off. | |
+| 13 | With the overlay shown, type into an editor beneath it → keystrokes land in the editor (overlay did not steal focus). | |
+| 14 | The window grows to fit a long answer, then shrinks back on the next question. | |
 
-Items 1, 2, 4, 5, 6, 7, 8 must pass for release. Item 3 (QuickTime) is
-best-effort per macOS ScreenCaptureKit limitations.
+All checks except item 3 must pass for release. Item 3 (QuickTime) is best-effort
+per macOS ScreenCaptureKit limitations.
 
 ---
 

@@ -1,3 +1,23 @@
+# Ghostpane v0.2.0
+
+### New in v0.2.0
+- **ChatGPT is now the default.** Sign in once with `codex login`; Claude remains
+  available from the provider dropdown when you want it.
+- **Hold ⌘⏎ for audio + screen context.** Ghostpane records microphone and
+  system audio only while the shortcut is held, transcribes both locally, deletes
+  the raw recordings, captures a fresh screenshot, and asks the selected provider.
+  A quick tap keeps the original screenshot-only behavior.
+- **Hardened desktop boundary.** Renderer navigation, external links, IPC payloads,
+  and temporary screenshot ownership are now validated and cleaned up.
+- **Reliable GitHub DMGs.** Releases now validate both test suites, build a
+  universal native helper, fail closed without the stable signing identity, and
+  verify both Intel and Apple Silicon artifacts before uploading either one.
+
+Held audio requires macOS 14+ and Accessibility, Microphone, Screen Recording,
+and Speech Recognition permissions. Downloads are still ordinary `.dmg` files.
+
+---
+
 # Ghostpane v0.1.12
 
 ### New in v0.1.12
