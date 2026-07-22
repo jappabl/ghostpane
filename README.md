@@ -175,6 +175,14 @@ That's it. Press `⌘\` to tuck it away whenever you want.
 
 > macOS is the only shipped target today.
 
+### Don't take the exclusion on faith — verify it
+- **30-second manual test:** show the overlay (`⌘\`), start a QuickTime screen
+  recording or a Zoom "Share Screen", and check the playback — the overlay you
+  see isn't in the capture.
+- **Rigorous automated A/B proof:** `npm run verify:capture` shows a marker
+  window and captures the screen with content protection OFF → ON → OFF, printing
+  a PASS/FAIL verdict and saving the images. See [docs/SMOKE.md](docs/SMOKE.md).
+
 ---
 
 ## Troubleshooting
