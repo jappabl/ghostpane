@@ -19,7 +19,10 @@ export function ask(opts: AskOptions): void {
     ? `${opts.prompt}\n\n[Screenshot saved at: ${opts.imagePath}] Read the image file at that path and answer.`
     : opts.prompt
 
-  const args = ['-p', prompt, '--output-format', 'stream-json', '--verbose']
+  const args = [
+    '-p', prompt,
+    '--output-format', 'stream-json', '--verbose', '--include-partial-messages'
+  ]
   let child
   try {
     child = spawnFn(bin, args, { stdio: ['ignore', 'pipe', 'pipe'] })
@@ -31,6 +34,7 @@ export function ask(opts: AskOptions): void {
   let buf = ''
   let stderr = ''
   let done = false
+  let sawDelta = false
   const finishOnce = (fn: () => void) => { if (!done) { done = true; fn() } }
 
   child.on('error', (e: NodeJS.ErrnoException) => {
@@ -51,7 +55,18 @@ export function ask(opts: AskOptions): void {
       if (!line) continue
       let obj: any
       try { obj = JSON.parse(line) } catch { continue }
-      if (obj.type === 'assistant' && obj.message?.content) {
+      // Live token deltas (when --include-partial-messages is honored).
+      if (obj.type === 'stream_event' && obj.event?.type === 'content_block_delta') {
+        const delta = obj.event.delta
+        if (delta?.type === 'text_delta' && delta.text) {
+          sawDelta = true
+          opts.onChunk(delta.text)
+        }
+        continue
+      }
+      // Full assistant message — only emit if we never saw streaming deltas,
+      // otherwise it would duplicate the already-streamed text.
+      if (obj.type === 'assistant' && obj.message?.content && !sawDelta) {
         for (const block of obj.message.content) {
           if (block.type === 'text' && block.text) opts.onChunk(block.text)
         }
