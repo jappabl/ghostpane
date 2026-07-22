@@ -10,8 +10,7 @@ html, body { margin: 0; height: 100%; background: transparent; overflow: hidden;
   color: #fff; border-radius: 8px; padding: 8px 10px; outline: none; font-size: 13px; }
 .btn { background: rgba(120,120,255,0.28); border: 1px solid rgba(140,140,255,0.4);
   color: #fff; border-radius: 8px; padding: 8px 10px; font-size: 12px; cursor: pointer; }
-.answer { flex: 1; overflow-y: auto; font-size: 13px; line-height: 1.5;
-  white-space: pre-wrap; }
+.answer { font-size: 13px; line-height: 1.5; white-space: pre-wrap; }
 .answer pre { background: rgba(0,0,0,0.35); padding: 10px; border-radius: 8px; overflow-x: auto; }
 .status { font-size: 11px; opacity: 0.6; }
 .error { color: #ff8080; }

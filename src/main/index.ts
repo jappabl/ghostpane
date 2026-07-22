@@ -30,7 +30,13 @@ async function handleEvent(e: MainEvent) {
       win.isVisible() ? win.hide() : win.showInactive()
       break
     case 'focus-input':
-      win.showInactive(); win.focus(); send(CHANNELS.mainEvent, 'focus-input')
+      // The ONLY place we deliberately take focus — the user explicitly asked
+      // to type. app.focus({steal}) is needed for a dock-hidden accessory app
+      // to actually receive keystrokes on macOS. Everywhere else stays inactive.
+      win.show()
+      if (process.platform === 'darwin') app.focus({ steal: true })
+      win.focus()
+      send(CHANNELS.mainEvent, 'focus-input')
       break
     case 'ask-screenshot':
       try {
