@@ -1,0 +1,32 @@
+name: release
+on:
+  push:
+    tags: ['v*']
+jobs:
+  mac:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 20 }
+      - run: npm ci
+      - run: npm test
+      - run: npm run dist
+      - uses: softprops/action-gh-release@v2
+        with:
+          files: release/*.dmg
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+  # windows job intentionally deferred; enable when Windows is a target:
+  # win:
+  #   runs-on: windows-latest
+  #   steps:
+  #     - uses: actions/checkout@v4
+  #     - uses: actions/setup-node@v4
+  #       with: { node-version: 20 }
+  #     - run: npm ci
+  #     - run: npm test
+  #     - run: npx electron-vite build && npx electron-builder --win
+  #     - uses: softprops/action-gh-release@v2
+  #       with: { files: release/*.exe }
+  #       env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
