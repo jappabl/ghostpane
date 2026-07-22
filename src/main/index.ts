@@ -1,10 +1,12 @@
-import { app, globalShortcut, ipcMain, screen, BrowserWindow } from 'electron'
+import { app, globalShortcut, ipcMain, screen, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { createOverlay } from './overlay-window'
 import { registerShortcuts } from './register-shortcuts'
 import { captureBehindOverlay } from './screenshot'
-import { ask } from './claude'
-import { CHANNELS, type MainEvent, type AskRequest } from '../shared/ipc'
+import { ask, resolveClaude } from './claude'
+import { initLogger, getLogPath, getLogDir, log } from './logger'
+import { getSettings, setModel } from './settings'
+import { CHANNELS, type MainEvent, type AskRequest, type AppConfig } from '../shared/ipc'
 
 let win: BrowserWindow | null = null
 let clickThrough = false
@@ -13,18 +15,27 @@ function send(channel: string, payload?: unknown) {
   win?.webContents.send(channel, payload)
 }
 
+function pushConfig() {
+  const cfg: AppConfig = { model: getSettings().model, logPath: getLogPath() }
+  send(CHANNELS.config, cfg)
+}
+
 function runAsk(prompt: string, imagePath?: string) {
+  win?.showInactive() // ensure the answer/error is actually visible
   ask({
     prompt: prompt || 'Read the question or content on screen and answer concisely.',
     imagePath,
+    model: getSettings().model,
     onChunk: (text) => send(CHANNELS.answerChunk, { text }),
     onDone: () => send(CHANNELS.answerDone),
-    onError: (message) => send(CHANNELS.answerError, { message })
+    onError: (message) => { log('error', 'ask error surfaced to UI', { message }); send(CHANNELS.answerError, { message }) },
+    onLog: (level, msg, extra) => log(level, msg, extra)
   })
 }
 
 async function handleEvent(e: MainEvent) {
   if (!win) return
+  log('info', 'shortcut', { event: e })
   switch (e) {
     case 'toggle':
       win.isVisible() ? win.hide() : win.showInactive()
@@ -39,10 +50,14 @@ async function handleEvent(e: MainEvent) {
       send(CHANNELS.mainEvent, 'focus-input')
       break
     case 'ask-screenshot':
+      win.showInactive() // make results visible; capture restores this state
       try {
         const path = await captureBehindOverlay(win)
+        log('info', 'screenshot captured', { path })
         runAsk('', path)
       } catch (err) {
+        log('error', 'screenshot capture failed', err)
+        win.showInactive()
         send(CHANNELS.answerError, { message: (err as Error).message })
       }
       break
@@ -54,6 +69,9 @@ async function handleEvent(e: MainEvent) {
     case 'scroll-up': case 'scroll-down':
       send(CHANNELS.mainEvent, e)
       break
+    case 'open-logs':
+      shell.openPath(getLogDir())
+      break
     case 'quit':
       app.quit()
       break
@@ -61,20 +79,32 @@ async function handleEvent(e: MainEvent) {
 }
 
 app.whenReady().then(() => {
+  initLogger()
+  const claude = resolveClaude()
+  log(claude.found ? 'info' : 'warn', 'claude resolution', { bin: claude.bin, found: claude.found })
+
   win = createOverlay(
     join(__dirname, '../preload/index.js'),
     process.env.ELECTRON_RENDERER_URL ?? null
   )
 
-  registerShortcuts(handleEvent, {
+  win.webContents.on('did-finish-load', pushConfig)
+
+  const results = registerShortcuts(handleEvent, {
     register: (acc, cb) => globalShortcut.register(acc, cb)
   })
+  for (const r of results) {
+    if (!r.ok) log('warn', 'shortcut FAILED to register (conflict?)', { event: r.event, accelerator: r.accelerator })
+  }
+  log('info', 'shortcuts registered', { ok: results.filter((r) => r.ok).length, total: results.length })
 
   ipcMain.on(CHANNELS.ask, (_e, req: AskRequest) => {
+    log('info', 'ask from UI', { withScreenshot: req.withScreenshot, promptLen: req.prompt.length })
     if (req.withScreenshot && win) {
+      win.showInactive()
       captureBehindOverlay(win)
         .then((path) => runAsk(req.prompt, path))
-        .catch((err) => send(CHANNELS.answerError, { message: (err as Error).message }))
+        .catch((err) => { log('error', 'screenshot capture failed', err); win?.showInactive(); send(CHANNELS.answerError, { message: (err as Error).message }) })
     } else {
       runAsk(req.prompt)
     }
@@ -85,8 +115,11 @@ app.whenReady().then(() => {
     win?.setIgnoreMouseEvents(val, { forward: true })
   })
 
-  // Grow/shrink the window to fit the rendered content. The renderer reports
-  // its natural content height; we clamp to the display and keep it on-screen.
+  ipcMain.on(CHANNELS.setModel, (_e, model: string) => {
+    setModel(model)
+    pushConfig()
+  })
+
   const MIN_H = 64
   ipcMain.on(CHANNELS.resize, (_e, height: number) => {
     if (!win) return

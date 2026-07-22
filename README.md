@@ -148,7 +148,11 @@ switcher** — that's intentional. You control it entirely with keyboard shortcu
 | **Answer what's on screen** | `⌘ ⏎` | Takes a screenshot behind the overlay and asks Claude about it. |
 | Scroll a long answer | `⌘ ↑` / `⌘ ↓` | |
 | **Click-through** on/off | `⌘ ⇧ \` | When on, your clicks pass *through* the overlay to the app underneath. |
+| **Open logs** | `⌘ ⇧ L` | Opens `~/Library/Logs/Ghostpane/` so you can see exactly what happened. |
 | **Quit** Ghostpane | `⌘ ⇧ Q` | |
+
+**Pick a model:** the dropdown in the bar chooses Default / Opus / Sonnet /
+Haiku (saved between launches, passed to `claude --model`).
 
 **Your first question, start to finish:**
 
@@ -193,10 +197,15 @@ another app already uses `⌘\`, that shortcut may be taken — quit that app an
 try again. There is deliberately no Dock icon, so "nothing visible" is normal
 until you press `⌘\`.
 
-**The answer area shows "Claude Code CLI not found on PATH."**
-Ghostpane can't find the `claude` command. Redo **Step 1**, then fully **quit
-Ghostpane (`⌘⇧Q`) and reopen it** so it picks up your PATH. Verify in Terminal
-with `claude --version`.
+**The answer area shows "Claude Code CLI not found."**
+Ghostpane looks for `claude` in the usual install locations (Homebrew,
+`/usr/local/bin`, `~/.local/bin`, etc.). If it still can't find it, redo
+**Step 1**, then check the log (**⌘⇧L**) — it prints exactly where it looked.
+
+**Something's wrong and I want to see what.**
+Press **⌘⇧L** to open `~/Library/Logs/Ghostpane/ghostpane.log`. It records
+startup, which `claude` binary was found, every shortcut, each ask, and the exact
+CLI exit code + stderr.
 
 **It says something about billing / API key instead of answering.**
 You're logged into Claude Code with an API key instead of your subscription. In

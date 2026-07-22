@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { CHANNELS } from '../shared/ipc'
-import type { MainEvent, AskRequest } from '../shared/ipc'
+import type { MainEvent, AskRequest, AppConfig } from '../shared/ipc'
 
 const api = {
   onMainEvent: (cb: (e: MainEvent) => void) =>
@@ -11,8 +11,11 @@ const api = {
     ipcRenderer.on(CHANNELS.answerDone, () => cb()),
   onAnswerError: (cb: (e: { message: string }) => void) =>
     ipcRenderer.on(CHANNELS.answerError, (_e, v) => cb(v)),
+  onConfig: (cb: (c: AppConfig) => void) =>
+    ipcRenderer.on(CHANNELS.config, (_e, v) => cb(v)),
   ask: (req: AskRequest) => ipcRenderer.send(CHANNELS.ask, req),
   setClickThrough: (val: boolean) => ipcRenderer.send(CHANNELS.setClickThrough, val),
+  setModel: (model: string) => ipcRenderer.send(CHANNELS.setModel, model),
   resize: (height: number) => ipcRenderer.send(CHANNELS.resize, height)
 }
 

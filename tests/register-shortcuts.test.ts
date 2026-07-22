@@ -8,7 +8,7 @@ describe('registerShortcuts', () => {
     const register = vi.fn((acc: string, cb: () => void) => { callbacks[acc] = cb; return true })
     const events: MainEvent[] = []
     const results = registerShortcuts((e) => events.push(e), { register })
-    expect(results.length).toBe(7)
+    expect(results.length).toBe(8)
     expect(results.every((r) => r.ok)).toBe(true)
     callbacks['CommandOrControl+\\']()
     expect(events).toContain('toggle')

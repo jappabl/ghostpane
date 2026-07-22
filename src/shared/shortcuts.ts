@@ -7,5 +7,6 @@ export const DEFAULT_SHORTCUTS: Record<MainEvent, string> = {
   'scroll-up': 'CommandOrControl+Up',
   'scroll-down': 'CommandOrControl+Down',
   'toggle-click-through': 'CommandOrControl+Shift+\\',
+  'open-logs': 'CommandOrControl+Shift+L',
   'quit': 'CommandOrControl+Shift+Q'
 }

@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import Markdown from 'react-markdown'
 import { CameraIcon } from './components/Icons'
+import { MODELS, type AppConfig } from '../shared/ipc'
 
 // Cap the overlay at ~85% of the screen; taller answers scroll inside.
 const MAX_H = Math.floor((window.screen?.availHeight ?? 900) * 0.85)
@@ -10,6 +11,7 @@ export function App() {
   const [answer, setAnswer] = useState('')
   const [thinking, setThinking] = useState(false)
   const [error, setError] = useState('')
+  const [config, setConfig] = useState<AppConfig>({ model: '', logPath: '' })
   const inputRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -33,6 +35,7 @@ export function App() {
     window.ghost.onAnswerChunk((c) => { setAnswer((a) => a + c.text); setThinking(false) })
     window.ghost.onAnswerDone(() => setThinking(false))
     window.ghost.onAnswerError((e) => { setError(e.message); setThinking(false) })
+    window.ghost.onConfig((c) => setConfig(c))
     window.ghost.onMainEvent((e) => {
       if (e === 'focus-input') inputRef.current?.focus()
       if (e === 'scroll-up') bodyRef.current?.scrollBy({ top: -140 })
@@ -67,6 +70,15 @@ export function App() {
           onKeyDown={(e) => { if (e.key === 'Enter') beginAsk(false) }}
         />
         <div className="bar-actions">
+          <select
+            className="model"
+            title="Model"
+            value={config.model}
+            onChange={(e) => window.ghost.setModel(e.target.value)}
+          >
+            {MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+          </select>
+          <span className="sep" />
           <button className="iconbtn" title="Screenshot & ask (⌘⏎)" onClick={() => beginAsk(true)}>
             <CameraIcon />
           </button>
@@ -78,7 +90,10 @@ export function App() {
         <div className="panel glass">
           <div className="panel-body" ref={bodyRef}>
             {error
-              ? <div className="error">{error}</div>
+              ? <div className="error">
+                  <div className="error-msg">{error}</div>
+                  <div className="error-log">Logs: {config.logPath || '~/Library/Logs/Ghostpane'} · press ⌘⇧L to open</div>
+                </div>
               : thinking && !answer
                 ? <div className="thinking"><span className="d" /><span className="d" /><span className="d" /> Thinking…</div>
                 : <Markdown>{answer}</Markdown>}
@@ -87,6 +102,7 @@ export function App() {
             <span>⌘\ hide</span>
             <span>⌘↑ ⌘↓ scroll</span>
             <span>⌘⇧\ click-through</span>
+            <span>⌘⇧L logs</span>
           </div>
         </div>
       )}
