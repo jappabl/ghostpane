@@ -5,9 +5,18 @@ import { registerShortcuts } from './register-shortcuts'
 import { captureBehindOverlay, screenPermission, warmUpCapture } from './screenshot'
 import { ask, resolveClaude } from './claude'
 import { initLogger, getLogPath, getLogDir, log } from './logger'
-import { getSettings, setModel } from './settings'
-import { CHANNELS, type MainEvent, type AskRequest, type AppConfig } from '../shared/ipc'
+import { getSettings, setModel, setProvider } from './settings'
+import { CHANNELS, type MainEvent, type AppConfig } from '../shared/ipc'
 import { OwnedPaths } from './owned-paths'
+import {
+  isTrustedSender,
+  parseAskRequest,
+  parseBoolean,
+  parseModel,
+  parseProvider,
+  parseResize
+} from './ipc-validation'
+import { isExternalHttpsUrl } from './navigation'
 
 let win: BrowserWindow | null = null
 let clickThrough = false
@@ -150,7 +159,10 @@ app.whenReady().then(() => {
   }
   log('info', 'shortcuts registered', { ok: results.filter((r) => r.ok).length, total: results.length })
 
-  ipcMain.on(CHANNELS.ask, (_e, req: AskRequest) => {
+  ipcMain.on(CHANNELS.ask, (event, value: unknown) => {
+    if (!win || !isTrustedSender(event, win)) return
+    const req = parseAskRequest(value)
+    if (!req) { log('warn', 'rejected invalid ask IPC'); return }
     if (busy) { log('info', 'ignoring UI ask — an ask is already in flight'); return }
     log('info', 'ask from UI', { withScreenshot: req.withScreenshot, promptLen: req.prompt.length })
     if (req.withScreenshot && win) {
@@ -164,18 +176,41 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.on(CHANNELS.setClickThrough, (_e, val: boolean) => {
+  ipcMain.on(CHANNELS.setClickThrough, (event, value: unknown) => {
+    if (!win || !isTrustedSender(event, win)) return
+    const val = parseBoolean(value)
+    if (val === null) return
     clickThrough = val
     win?.setIgnoreMouseEvents(val, { forward: true })
   })
 
-  ipcMain.on(CHANNELS.setModel, (_e, model: string) => {
-    setModel(model)
+  ipcMain.on(CHANNELS.setProvider, (event, value: unknown) => {
+    if (!win || !isTrustedSender(event, win)) return
+    const provider = parseProvider(value)
+    if (!provider) return
+    setProvider(provider)
     pushConfig()
   })
 
+  ipcMain.on(CHANNELS.setModel, (event, value: unknown) => {
+    if (!win || !isTrustedSender(event, win)) return
+    const provider = getSettings().provider
+    const model = parseModel(provider, value)
+    if (model === null) return
+    setModel(model, provider)
+    pushConfig()
+  })
+
+  ipcMain.on(CHANNELS.openExternal, (event, value: unknown) => {
+    if (!win || !isTrustedSender(event, win)) return
+    if (typeof value === 'string' && isExternalHttpsUrl(value)) void shell.openExternal(value)
+  })
+
   const MIN_H = 64
-  ipcMain.on(CHANNELS.resize, (_e, height: number) => {
+  ipcMain.on(CHANNELS.resize, (event, value: unknown) => {
+    if (!win || !isTrustedSender(event, win)) return
+    const height = parseResize(value)
+    if (height === null) return
     if (!win) return
     const b = win.getBounds()
     const wa = screen.getDisplayMatching(b).workArea

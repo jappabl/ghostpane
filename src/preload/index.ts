@@ -1,6 +1,7 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { CHANNELS } from '../shared/ipc'
 import type { MainEvent, AskRequest, AppConfig } from '../shared/ipc'
+import type { ProviderId } from '../shared/providers'
 
 const api = {
   onMainEvent: (cb: (e: MainEvent) => void) =>
@@ -18,6 +19,8 @@ const api = {
   ask: (req: AskRequest) => ipcRenderer.send(CHANNELS.ask, req),
   setClickThrough: (val: boolean) => ipcRenderer.send(CHANNELS.setClickThrough, val),
   setModel: (model: string) => ipcRenderer.send(CHANNELS.setModel, model),
+  setProvider: (provider: ProviderId) => ipcRenderer.send(CHANNELS.setProvider, provider),
+  openExternal: (url: string) => ipcRenderer.send(CHANNELS.openExternal, url),
   resize: (height: number) => ipcRenderer.send(CHANNELS.resize, height)
 }
 

@@ -11,6 +11,7 @@ export const CHANNELS = {
   config: 'main:config',          // main → renderer: AppConfig
   setModel: 'renderer:set-model', // renderer → main: model id string
   setProvider: 'renderer:set-provider', // renderer → main: ProviderId
+  openExternal: 'renderer:open-external', // renderer → main: validated HTTPS URL
   status: 'main:status'           // main → renderer: status text ('' = clear)
 } as const
 
