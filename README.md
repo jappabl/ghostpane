@@ -10,7 +10,7 @@ documented OS capabilities.
 
 ---
 
-## ⚠️ Intended use — read this
+## ⚠️ Intended use — read this first
 
 The "invisible to screen capture" behaviour uses the same OS APIs that password
 managers and DRM video players use to keep sensitive windows out of screen
@@ -21,8 +21,146 @@ answers during a monitored job interview or a proctored exam — is very likely 
 violation of that platform's rules and, depending on context, dishonest or
 against the law. **That's on you.** This project is provided for legitimate uses
 (private notes and teleprompting during your *own* presentations, accessibility,
-research into how screen-capture exclusion works) and with no warranty. Don't be
-a cheater.
+research into how screen-capture exclusion works) and with no warranty.
+
+---
+
+# Install guide (macOS) — read every step
+
+> This is written so a first-timer can't get lost. It takes about 5 minutes.
+> You only do steps 1–3 and 5–6 **once**.
+
+## Step 0 — What you need
+
+1. A **Mac** (Apple Silicon or Intel).
+2. A **Claude Pro or Max subscription** (the $20+/mo plan at claude.ai). A free
+   account will not work.
+3. **Claude Code** installed and logged in on this Mac (steps 1–2 below). This is
+   how Ghostpane talks to Claude using your subscription — it never asks you for
+   an API key.
+
+## Step 1 — Install Claude Code
+
+Open the **Terminal** app (press `Cmd+Space`, type "Terminal", hit Return) and
+paste this, then press Return:
+
+```bash
+curl -fsSL https://claude.ai/install.sh | bash
+```
+
+(Prefer Homebrew? `brew install --cask claude-code` works too. Don't use npm —
+that method is deprecated.)
+
+When it finishes, **quit and reopen Terminal** (so it picks up the new command),
+then verify it worked:
+
+```bash
+claude --version
+```
+
+You should see a version number like `2.x.x`. If you instead see
+`command not found`, close Terminal, open it again, and re-run the check. (Full
+install docs: https://docs.claude.com/en/docs/claude-code )
+
+## Step 2 — Log in to Claude with your subscription
+
+In Terminal, run:
+
+```bash
+claude
+```
+
+The first time, it walks you through logging in — choose **"Claude account with
+subscription"** (NOT an API key), and a browser window opens for you to sign in
+to your Pro/Max account. Approve it, return to Terminal, then type `/exit` and
+press Return to leave.
+
+✅ **Test that it's really using your subscription** (optional but reassuring):
+
+```bash
+claude -p "say hi"
+```
+
+If it replies `hi` (or similar), you're done with setup. If it complains about
+billing or an API key, run `claude` again and make sure you picked the
+**subscription** login, not an API key.
+
+## Step 3 — Figure out which Ghostpane file to download
+
+You need to know if your Mac is **Apple Silicon** or **Intel**:
+
+1. Click the **Apple menu** () at the top-left of your screen.
+2. Click **About This Mac**.
+3. Look at the chip/processor line:
+   - If it says **"Chip: Apple M1 / M2 / M3 …"** → you have **Apple Silicon**.
+   - If it says **"Processor: Intel …"** → you have **Intel**.
+
+## Step 4 — Download and install Ghostpane
+
+1. Go to the **[Releases page](../../releases/latest)**.
+2. Under **Assets**, download the file that matches Step 3:
+   - Apple Silicon → **`Ghostpane-<version>-arm64.dmg`**
+   - Intel → **`Ghostpane-<version>.dmg`** (the one *without* `arm64`)
+3. Open the downloaded `.dmg` (double-click it in Downloads). A window appears
+   showing the **Ghostpane** app icon next to an **Applications** folder.
+4. **Drag the Ghostpane icon onto the Applications folder.** That installs it.
+5. You can now eject the `.dmg` (click the ⏏ next to it in Finder's sidebar).
+
+## Step 5 — Open it the first time (get past the security warning)
+
+Because this app isn't signed with a paid Apple certificate, macOS blocks it on
+the first launch. This is expected — here's how to open it anyway:
+
+1. Open your **Applications** folder (in Finder, press `Cmd+Shift+A`).
+2. **Right-click** (or Control-click) **Ghostpane** → choose **Open**.
+3. A dialog says *"macOS cannot verify the developer…"* — click the **Open**
+   button in that dialog.
+
+   - If you see **no Open button** (just "Move to Trash" / "Cancel", common on
+     newer macOS): click **Cancel**, then go to **System Settings → Privacy &
+     Security**, scroll down to the message *"Ghostpane was blocked…"*, and click
+     **Open Anyway**. Then repeat the right-click → Open.
+
+You only have to do this **once**. After that it opens normally.
+
+## Step 6 — Grant Screen Recording permission
+
+Ghostpane needs Screen Recording permission so it can **screenshot the thing you
+ask about**. (Its *own* window still stays hidden from anyone *else's* screen
+share — this permission is only about Ghostpane reading your screen.)
+
+You'll be prompted the first time you use the screenshot hotkey. To do it now:
+
+1. **System Settings → Privacy & Security → Screen Recording**.
+2. Turn **Ghostpane** on (toggle it blue). If Ghostpane isn't listed yet, click
+   **+**, choose Ghostpane from Applications, and add it.
+3. macOS will ask you to **quit and reopen Ghostpane** — do that.
+
+## Step 7 — Use it
+
+When Ghostpane is running there is **no Dock icon and no window in the app
+switcher** — that's intentional. You control it entirely with keyboard shortcuts:
+
+| What you want | Keys | Notes |
+|---|---|---|
+| **Show / hide** the overlay | `⌘ \` | The backslash key. Start here. |
+| **Type a question** | `⌘ ⇧ Space` | Puts your cursor in the text box. Type, press **Return** to send. |
+| **Answer what's on screen** | `⌘ ⏎` | Takes a screenshot behind the overlay and asks Claude about it. |
+| Scroll a long answer | `⌘ ↑` / `⌘ ↓` | |
+| **Click-through** on/off | `⌘ ⇧ \` | When on, your clicks pass *through* the overlay to the app underneath. |
+| **Quit** Ghostpane | `⌘ ⇧ Q` | |
+
+**Your first question, start to finish:**
+
+1. Press **`⌘\`** — a small translucent bar appears near the top of your screen.
+2. Press **`⌘⇧Space`** — your cursor lands in the box.
+3. Type `what is the capital of France` and press **Return**.
+4. The answer streams in and the window **grows to fit it**, then shrinks back on
+   your next question.
+5. To answer something already on your screen (e.g. a question in another app),
+   just press **`⌘⏎`** instead — no typing needed.
+
+That's it. Press `⌘\` to tuck it away whenever you want.
 
 ---
 
@@ -30,73 +168,67 @@ a cheater.
 
 | Layer | How | Reliability |
 |---|---|---|
-| **Screen-capture exclusion** | Electron `setContentProtection(true)` → macOS `NSWindowSharingNone` | Windows: excluded from all capture (solid). macOS: reliably hidden from Zoom/Teams/Meet screen-share and screenshots; **best-effort** against some ScreenCaptureKit recorders & QuickTime. Linux: not supported (overlay is visible). |
-| **No focus theft** | Non-activating window shown with `showInactive()` | The app you're actually using stays foreground; overlay never appears in the app switcher. |
+| **Screen-capture exclusion** | Electron `setContentProtection(true)` → macOS `NSWindowSharingNone` | Reliably hidden from Zoom/Teams/Meet screen-share and screenshots; **best-effort** against some ScreenCaptureKit recorders & QuickTime. Windows (not yet shipped) would be airtight; Linux unsupported. |
+| **No focus theft** | Non-activating window shown with `showInactive()` | The app you're actually using stays foreground; the overlay never appears in the app switcher. |
 | **No Dock / taskbar entry** | `skipTaskbar`, macOS `app.dock.hide()` | Nothing to click on, nothing to see. |
 | **Hotkey-driven** | Global shortcuts for every action | You never move the mouse to an invisible window (the classic tell). |
-| **Survives full screen** | `setVisibleOnAllWorkspaces(..., { visibleOnFullScreenWorkspaces: true })` | Stays up over full-screen apps. |
 
-> macOS is the primary target. Windows targets are configured but not yet built
-> or tested. Linux is unsupported because content protection is a no-op there.
+> macOS is the only shipped target today.
 
-## Requirements
+---
 
-- **macOS**
-- **[Claude Code](https://docs.claude.com/en/docs/claude-code) installed and logged in.** Ghostpane shells out to the `claude` CLI, which routes requests through your Pro/Max subscription.
-  ```bash
-  # install (see Anthropic docs for your platform), then:
-  claude login
-  ```
-- **Screen Recording permission** for Ghostpane (needed so *it* can screenshot the question — its own window is still excluded from *others'* capture). Grant it in **System Settings → Privacy & Security → Screen Recording** the first time you use ⌘⏎.
+## Troubleshooting
 
-## Install
+**"I pressed `⌘\` and nothing happened."**
+Make sure Ghostpane is actually running (you opened it from Applications). If
+another app already uses `⌘\`, that shortcut may be taken — quit that app and
+try again. There is deliberately no Dock icon, so "nothing visible" is normal
+until you press `⌘\`.
 
-1. Download the latest `Ghostpane-*.dmg` from the [Releases](../../releases) page.
-2. Open the `.dmg` and drag Ghostpane to Applications.
-3. The build is **unsigned**, so on first launch macOS Gatekeeper will block it.
-   **Right-click the app → Open → Open** to run it anyway (only needed once).
+**The answer area shows "Claude Code CLI not found on PATH."**
+Ghostpane can't find the `claude` command. Redo **Step 1**, then fully **quit
+Ghostpane (`⌘⇧Q`) and reopen it** so it picks up your PATH. Verify in Terminal
+with `claude --version`.
 
-## Hotkeys
+**It says something about billing / API key instead of answering.**
+You're logged into Claude Code with an API key instead of your subscription. In
+Terminal run `claude`, and re-log in choosing the **subscription** option.
 
-| Action | Shortcut |
-|---|---|
-| Show / hide overlay | `⌘ \` |
-| Screenshot behind overlay + ask | `⌘ ⏎` |
-| Focus the prompt input (to type) | `⌘ ⇧ Space` |
-| Scroll answer up / down | `⌘ ↑` / `⌘ ↓` |
-| Toggle click-through | `⌘ ⇧ \` |
-| Quit | `⌘ ⇧ Q` |
+**`⌘⏎` gives an "Empty screenshot / grant Screen Recording" error.**
+Do **Step 6**, then quit and reopen Ghostpane.
 
-Type a question and press **Enter** for a text-only ask, or hit **⌘⏎** to
-capture whatever's on screen behind the overlay and have Claude read it.
+**The overlay shows up in my screen recording anyway.**
+On macOS, exclusion is reliable for Zoom/Teams/Meet *screen sharing* and
+screenshots, but **best-effort** for some ScreenCaptureKit-based recorders and
+QuickTime. This is a documented macOS limitation, not a bug.
+
+**How do I completely close it?**
+Press `⌘⇧Q`. (Or, from Terminal: `pkill -f Ghostpane`.)
+
+---
 
 ## Build from source
 
 ```bash
-git clone <this repo>
+git clone https://github.com/jappabl/ghostpane
 cd ghostpane
 npm install
 npm run dev        # live-reload dev build
 npm test           # unit tests (Vitest)
-npm run dist       # build a .dmg into release/
+npm run dist       # build .dmg files into release/
 ```
-
-See [`docs/SMOKE.md`](docs/SMOKE.md) for the manual verification checklist and
-[`docs/superpowers/specs`](docs/superpowers/specs) for the design spec.
 
 ## How it works (architecture)
 
 - **main process** (`src/main`) owns everything OS-native: the stealth window
   (`overlay-window.ts`), global hotkeys (`register-shortcuts.ts`), screen
-  capture (`screenshot.ts`), and the `claude` CLI provider (`claude.ts`).
+  capture (`screenshot.ts`), the content-fit resize handler (`index.ts`), and the
+  `claude` CLI provider (`claude.ts`, which also holds the overlay system prompt).
 - **preload** (`src/preload`) exposes a minimal, typed `window.ghost` API over a
   `contextBridge` — the renderer never touches Node or Electron directly.
 - **renderer** (`src/renderer`) is a small React app: a prompt box and a
-  streaming, markdown-rendered answer panel.
-
-The `claude` provider spawns `claude -p <prompt> --output-format stream-json
---verbose --include-partial-messages` and streams `text_delta` events straight
-to the UI.
+  streaming, markdown-rendered answer panel that reports its height so the window
+  fits the content.
 
 ## License
 
