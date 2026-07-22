@@ -25,6 +25,10 @@ export function createOverlay(preloadPath: string, loadUrl: string | null): Brow
     skipTaskbar: true,
     alwaysOnTop: true,
     fullscreenable: false,
+    // macOS: a 'panel' window gets NSWindowStyleMaskNonactivatingPanel, letting it
+    // float OVER other apps' full-screen Spaces (like Spotlight) without stealing
+    // focus. A normal NSWindow cannot appear over another app's full-screen space.
+    ...(process.platform === 'darwin' ? { type: 'panel' as const } : {}),
     webPreferences: {
       preload: preloadPath,
       contextIsolation: true,
