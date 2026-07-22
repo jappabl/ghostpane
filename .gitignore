@@ -10,3 +10,4 @@ verify-out/
 .worktrees/
 .swift-cache/
 native/.build/
+/build/native/
