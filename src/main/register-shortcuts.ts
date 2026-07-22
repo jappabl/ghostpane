@@ -1,0 +1,17 @@
+import { DEFAULT_SHORTCUTS } from '../shared/shortcuts'
+import type { MainEvent } from '../shared/ipc'
+
+export interface ShortcutDeps {
+  register: (accelerator: string, cb: () => void) => boolean
+}
+
+export function registerShortcuts(
+  onEvent: (e: MainEvent) => void,
+  deps: ShortcutDeps,
+  map: Record<MainEvent, string> = DEFAULT_SHORTCUTS
+): Array<{ event: MainEvent; accelerator: string; ok: boolean }> {
+  return (Object.entries(map) as [MainEvent, string][]).map(([event, accelerator]) => {
+    const ok = deps.register(accelerator, () => onEvent(event))
+    return { event, accelerator, ok }
+  })
+}

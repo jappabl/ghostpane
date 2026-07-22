@@ -1,24 +1,84 @@
-import { app, BrowserWindow } from 'electron'
+import { app, globalShortcut, ipcMain, BrowserWindow } from 'electron'
 import { join } from 'path'
+import { createOverlay } from './overlay-window'
+import { registerShortcuts } from './register-shortcuts'
+import { captureBehindOverlay } from './screenshot'
+import { ask } from './claude'
+import { CHANNELS, type MainEvent, type AskRequest } from '../shared/ipc'
 
 let win: BrowserWindow | null = null
+let clickThrough = false
 
-function createWindow() {
-  win = new BrowserWindow({
-    width: 520,
-    height: 640,
-    webPreferences: {
-      preload: join(__dirname, '../preload/index.js'),
-      contextIsolation: true,
-      nodeIntegration: false
-    }
+function send(channel: string, payload?: unknown) {
+  win?.webContents.send(channel, payload)
+}
+
+function runAsk(prompt: string, imagePath?: string) {
+  ask({
+    prompt: prompt || 'Read the question or content on screen and answer concisely.',
+    imagePath,
+    onChunk: (text) => send(CHANNELS.answerChunk, { text }),
+    onDone: () => send(CHANNELS.answerDone),
+    onError: (message) => send(CHANNELS.answerError, { message })
   })
-  if (process.env.ELECTRON_RENDERER_URL) {
-    win.loadURL(process.env.ELECTRON_RENDERER_URL)
-  } else {
-    win.loadFile(join(__dirname, '../renderer/index.html'))
+}
+
+async function handleEvent(e: MainEvent) {
+  if (!win) return
+  switch (e) {
+    case 'toggle':
+      win.isVisible() ? win.hide() : win.showInactive()
+      break
+    case 'focus-input':
+      win.showInactive(); win.focus(); send(CHANNELS.mainEvent, 'focus-input')
+      break
+    case 'ask-screenshot':
+      try {
+        const path = await captureBehindOverlay(win)
+        runAsk('', path)
+      } catch (err) {
+        send(CHANNELS.answerError, { message: (err as Error).message })
+      }
+      break
+    case 'toggle-click-through':
+      clickThrough = !clickThrough
+      win.setIgnoreMouseEvents(clickThrough, { forward: true })
+      send(CHANNELS.mainEvent, 'toggle-click-through')
+      break
+    case 'scroll-up': case 'scroll-down':
+      send(CHANNELS.mainEvent, e)
+      break
+    case 'quit':
+      app.quit()
+      break
   }
 }
 
-app.whenReady().then(createWindow)
+app.whenReady().then(() => {
+  win = createOverlay(
+    join(__dirname, '../preload/index.js'),
+    process.env.ELECTRON_RENDERER_URL ?? null
+  )
+
+  registerShortcuts(handleEvent, {
+    register: (acc, cb) => globalShortcut.register(acc, cb)
+  })
+
+  ipcMain.on(CHANNELS.ask, (_e, req: AskRequest) => {
+    if (req.withScreenshot && win) {
+      captureBehindOverlay(win)
+        .then((path) => runAsk(req.prompt, path))
+        .catch((err) => send(CHANNELS.answerError, { message: (err as Error).message }))
+    } else {
+      runAsk(req.prompt)
+    }
+  })
+
+  ipcMain.on(CHANNELS.setClickThrough, (_e, val: boolean) => {
+    clickThrough = val
+    win?.setIgnoreMouseEvents(val, { forward: true })
+  })
+})
+
+app.on('will-quit', () => globalShortcut.unregisterAll())
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })

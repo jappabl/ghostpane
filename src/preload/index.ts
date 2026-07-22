@@ -1,2 +1,19 @@
-import { contextBridge } from 'electron'
-contextBridge.exposeInMainWorld('ghost', { ping: () => 'pong' })
+import { contextBridge, ipcRenderer } from 'electron'
+import { CHANNELS } from '../shared/ipc'
+import type { MainEvent, AskRequest } from '../shared/ipc'
+
+const api = {
+  onMainEvent: (cb: (e: MainEvent) => void) =>
+    ipcRenderer.on(CHANNELS.mainEvent, (_e, v) => cb(v)),
+  onAnswerChunk: (cb: (c: { text: string }) => void) =>
+    ipcRenderer.on(CHANNELS.answerChunk, (_e, v) => cb(v)),
+  onAnswerDone: (cb: () => void) =>
+    ipcRenderer.on(CHANNELS.answerDone, () => cb()),
+  onAnswerError: (cb: (e: { message: string }) => void) =>
+    ipcRenderer.on(CHANNELS.answerError, (_e, v) => cb(v)),
+  ask: (req: AskRequest) => ipcRenderer.send(CHANNELS.ask, req),
+  setClickThrough: (val: boolean) => ipcRenderer.send(CHANNELS.setClickThrough, val)
+}
+
+contextBridge.exposeInMainWorld('ghost', api)
+export type GhostApi = typeof api
