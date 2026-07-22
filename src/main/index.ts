@@ -102,6 +102,11 @@ async function handleEvent(e: MainEvent) {
 
 app.whenReady().then(() => {
   initLogger()
+  const exe = app.getPath('exe')
+  const translocated = exe.includes('/AppTranslocation/')
+  const inApplications = exe.includes('/Applications/')
+  log('info', 'app location', { exe, translocated, inApplications })
+  if (translocated) log('warn', 'APP IS TRANSLOCATED — move Ghostpane to /Applications; permissions will not stick until you do')
   const claude = resolveClaude()
   log(claude.found ? 'info' : 'warn', 'claude resolution', { bin: claude.bin, found: claude.found })
   log('info', 'screen recording permission', { status: screenPermission() })

@@ -23,7 +23,10 @@ html, body {
 .bar {
   display: flex; align-items: center; gap: 10px;
   height: 46px; padding: 0 8px 0 14px; border-radius: 15px;
+  -webkit-app-region: drag; /* grab the bar to move the overlay */
 }
+/* interactive controls must stay clickable, not draggable */
+.ask, .iconbtn, .model { -webkit-app-region: no-drag; }
 
 /* brand / status dot */
 .dot {

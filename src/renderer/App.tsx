@@ -55,6 +55,7 @@ export function App() {
     if (!withScreenshot && !prompt.trim()) return
     setAnswer(''); setError(''); setThinking(true)
     window.ghost.ask({ prompt, withScreenshot })
+    setPrompt('') // clear the box so it's ready for the next question
   }
 
   return (

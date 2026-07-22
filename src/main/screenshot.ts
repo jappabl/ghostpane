@@ -11,9 +11,11 @@ export function screenPermission(): string {
 }
 
 export const PERM_HELP =
-  'Screen Recording permission needed. Enable "Ghostpane" under System Settings → ' +
-  'Privacy & Security → Screen Recording (I just opened it for you), then QUIT and ' +
-  'reopen Ghostpane (⌘⇧Q). After an update you may need to re-enable it.'
+  'Screen Recording permission needed. 1) Make sure Ghostpane is in your ' +
+  'Applications folder (NOT opened from the disk image). 2) Enable "Ghostpane" ' +
+  'under System Settings → Privacy & Security → Screen Recording (I just opened it). ' +
+  '3) QUIT (⌘⇧Q) and reopen. If it was already checked, UNcheck and re-check it. ' +
+  'After an update you may need to re-enable it (unsigned app).'
 
 export async function captureBehindOverlay(win: BrowserWindow): Promise<string> {
   const perm = screenPermission()

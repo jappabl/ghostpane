@@ -1,3 +1,18 @@
+# Ghostpane v0.1.8
+
+### New in v0.1.8
+- **Drag it around** — grab the bar (empty space or the dot) to move the overlay
+  anywhere on screen. Input, model picker, and buttons stay clickable.
+- **Input clears after you send** — hit Enter and the box empties, ready for the
+  next question.
+- **Permission diagnosis** — if you granted Screen Recording but it still says no
+  access, you're almost certainly running Ghostpane from the disk image / Downloads
+  (macOS "App Translocation"), so the grant doesn't stick. **Move Ghostpane to your
+  Applications folder and reopen it.** The log (`⌘⇧L`) now prints the exact app
+  path and flags translocation.
+
+---
+
 # Ghostpane v0.1.7
 
 ### New in v0.1.7
