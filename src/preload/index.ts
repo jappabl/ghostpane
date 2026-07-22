@@ -12,7 +12,8 @@ const api = {
   onAnswerError: (cb: (e: { message: string }) => void) =>
     ipcRenderer.on(CHANNELS.answerError, (_e, v) => cb(v)),
   ask: (req: AskRequest) => ipcRenderer.send(CHANNELS.ask, req),
-  setClickThrough: (val: boolean) => ipcRenderer.send(CHANNELS.setClickThrough, val)
+  setClickThrough: (val: boolean) => ipcRenderer.send(CHANNELS.setClickThrough, val),
+  resize: (height: number) => ipcRenderer.send(CHANNELS.resize, height)
 }
 
 contextBridge.exposeInMainWorld('ghost', api)

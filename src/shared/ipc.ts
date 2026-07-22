@@ -4,7 +4,8 @@ export const CHANNELS = {
   answerChunk: 'main:answer-chunk',
   answerDone: 'main:answer-done',
   answerError: 'main:answer-error',
-  setClickThrough: 'renderer:set-click-through' // renderer → main: boolean
+  setClickThrough: 'renderer:set-click-through', // renderer → main: boolean
+  resize: 'renderer:resize'        // renderer → main: desired content height (px)
 } as const
 
 export type MainEvent =

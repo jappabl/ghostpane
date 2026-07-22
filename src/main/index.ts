@@ -1,4 +1,4 @@
-import { app, globalShortcut, ipcMain, BrowserWindow } from 'electron'
+import { app, globalShortcut, ipcMain, screen, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { createOverlay } from './overlay-window'
 import { registerShortcuts } from './register-shortcuts'
@@ -83,6 +83,21 @@ app.whenReady().then(() => {
   ipcMain.on(CHANNELS.setClickThrough, (_e, val: boolean) => {
     clickThrough = val
     win?.setIgnoreMouseEvents(val, { forward: true })
+  })
+
+  // Grow/shrink the window to fit the rendered content. The renderer reports
+  // its natural content height; we clamp to the display and keep it on-screen.
+  const MIN_H = 64
+  ipcMain.on(CHANNELS.resize, (_e, height: number) => {
+    if (!win) return
+    const b = win.getBounds()
+    const wa = screen.getDisplayMatching(b).workArea
+    const maxH = Math.floor(wa.height * 0.85)
+    const h = Math.max(MIN_H, Math.min(Math.round(height), maxH))
+    if (h === b.height) return
+    let y = b.y
+    if (y + h > wa.y + wa.height) y = Math.max(wa.y, wa.y + wa.height - h)
+    win.setBounds({ x: b.x, y, width: b.width, height: h })
   })
 })
 
