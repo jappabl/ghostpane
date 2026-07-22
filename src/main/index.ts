@@ -19,10 +19,16 @@ import {
 } from './ipc-validation'
 import { isExternalHttpsUrl } from './navigation'
 import { routeAsk } from './provider-router'
+import { NativeHelper, resolveNativeHelperPath, type NativeHelperEvent } from './native-helper'
+import { buildAudioPrompt } from './audio-context'
+import { DEFAULT_SHORTCUTS } from '../shared/shortcuts'
 
 let win: BrowserWindow | null = null
 let clickThrough = false
 let busy = false // an ask (capture + Claude) is in flight; ignore new ones
+let audioActive = false
+let audioPermissionRequestSent = false
+let nativeHelper: NativeHelper | null = null
 const activeOwners = new Set<OwnedPaths>()
 
 function send(channel: string, payload?: unknown) {
@@ -89,6 +95,93 @@ function runAsk(prompt: string, imagePath?: string) {
     onError: (message) => { finish(); log('error', 'ask error surfaced to UI', { message }); send(CHANNELS.answerError, { message }) },
     onLog: (level, msg, extra) => log(level, msg, extra)
   })
+}
+
+async function runAudioAsk(microphoneTranscript: string, systemTranscript: string) {
+  if (!win) return
+  reveal()
+  send(CHANNELS.status, '📸 Capturing current screen context…')
+  try {
+    const path = await captureBehindOverlay(win)
+    log('info', 'audio-context screenshot captured', { path })
+    runAsk(buildAudioPrompt('', microphoneTranscript, systemTranscript), path)
+  } catch (err) {
+    onScreenshotError(err)
+  }
+}
+
+function registerScreenshotFallback() {
+  const accelerator = DEFAULT_SHORTCUTS['ask-screenshot']
+  if (globalShortcut.isRegistered(accelerator)) return
+  const ok = globalShortcut.register(accelerator, () => {
+    if (!audioPermissionRequestSent) {
+      audioPermissionRequestSent = true
+      nativeHelper?.send('request-permissions')
+    }
+    void handleEvent('ask-screenshot')
+  })
+  log(ok ? 'info' : 'warn', 'screenshot-only fallback shortcut', { accelerator, ok })
+}
+
+function updateNativePermissions(event: NativeHelperEvent) {
+  if (!event.permissions) return
+  log('info', 'native helper permissions', event.permissions)
+  const accelerator = DEFAULT_SHORTCUTS['ask-screenshot']
+  if (event.permissions.canOwnHotkey) globalShortcut.unregister(accelerator)
+  else registerScreenshotFallback()
+}
+
+function onNativeHelperEvent(event: NativeHelperEvent) {
+  switch (event.type) {
+    case 'ready':
+    case 'permission-state':
+      updateNativePermissions(event)
+      break
+    case 'tap':
+      void handleEvent('ask-screenshot')
+      break
+    case 'hold-started':
+      if (busy) {
+        nativeHelper?.send('cancel')
+        break
+      }
+      busy = true
+      audioActive = true
+      reveal()
+      send(CHANNELS.recording, { active: true, elapsedMs: 0 })
+      send(CHANNELS.status, '🎙️ Recording microphone + system audio…')
+      break
+    case 'hold-progress':
+      if (audioActive) send(CHANNELS.recording, { active: true, elapsedMs: event.elapsedMs ?? 0 })
+      break
+    case 'transcribing':
+      if (!audioActive) break
+      send(CHANNELS.recording, { active: false, elapsedMs: 0 })
+      send(CHANNELS.status, '🎙️ Transcribing audio locally…')
+      break
+    case 'hold-finished':
+      if (!audioActive) break
+      audioActive = false
+      send(CHANNELS.recording, { active: false, elapsedMs: 0 })
+      void runAudioAsk(event.microphoneTranscript ?? '', event.systemTranscript ?? '')
+      break
+    case 'hold-cancelled':
+      if (!audioActive) break
+      audioActive = false
+      busy = false
+      send(CHANNELS.recording, { active: false, elapsedMs: 0 })
+      send(CHANNELS.status, '')
+      break
+    case 'error':
+      if (audioActive) {
+        audioActive = false
+        busy = false
+        send(CHANNELS.recording, { active: false, elapsedMs: 0 })
+      }
+      reveal()
+      send(CHANNELS.answerError, { message: event.message ?? 'The audio helper failed.' })
+      break
+  }
 }
 
 async function handleEvent(e: MainEvent) {
@@ -161,11 +254,30 @@ app.whenReady().then(() => {
 
   const results = registerShortcuts(handleEvent, {
     register: (acc, cb) => globalShortcut.register(acc, cb)
-  })
+  }, undefined, new Set<MainEvent>(['ask-screenshot']))
   for (const r of results) {
     if (!r.ok) log('warn', 'shortcut FAILED to register (conflict?)', { event: r.event, accelerator: r.accelerator })
   }
   log('info', 'shortcuts registered', { ok: results.filter((r) => r.ok).length, total: results.length })
+
+  nativeHelper = new NativeHelper(
+    resolveNativeHelperPath(app.isPackaged, process.resourcesPath, app.getAppPath()),
+    {
+      onEvent: onNativeHelperEvent,
+      onUnavailable: (message) => {
+        log('warn', message)
+        if (audioActive) {
+          audioActive = false
+          busy = false
+          send(CHANNELS.recording, { active: false, elapsedMs: 0 })
+          send(CHANNELS.answerError, { message })
+        }
+        registerScreenshotFallback()
+      },
+      onLog: log
+    }
+  )
+  nativeHelper.start()
 
   ipcMain.on(CHANNELS.ask, (event, value: unknown) => {
     if (!win || !isTrustedSender(event, win)) return
@@ -231,6 +343,7 @@ app.whenReady().then(() => {
   })
 })
 
+app.on('will-quit', () => nativeHelper?.stop())
 app.on('will-quit', () => globalShortcut.unregisterAll())
 app.on('will-quit', () => { for (const owner of activeOwners) void owner.cleanup() })
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })

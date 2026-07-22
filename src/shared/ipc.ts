@@ -12,7 +12,8 @@ export const CHANNELS = {
   setModel: 'renderer:set-model', // renderer → main: model id string
   setProvider: 'renderer:set-provider', // renderer → main: ProviderId
   openExternal: 'renderer:open-external', // renderer → main: validated HTTPS URL
-  status: 'main:status'           // main → renderer: status text ('' = clear)
+  status: 'main:status',          // main → renderer: status text ('' = clear)
+  recording: 'main:recording'     // main → renderer: RecordingState
 } as const
 
 export type MainEvent =
@@ -33,3 +34,5 @@ export interface AppConfig {
   model: string
   logPath: string
 }
+
+export interface RecordingState { active: boolean; elapsedMs: number }

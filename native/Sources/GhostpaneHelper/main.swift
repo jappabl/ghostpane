@@ -10,6 +10,7 @@ private final class HelperRuntime: @unchecked Sendable {
     private var monitor: GlobalHotkeyMonitor?
     private var progressTimer: DispatchSourceTimer?
     private var holdStartedAt: Date?
+    private var audioReadyForPress = false
 
     func run() {
         let permissions = PermissionInspector.current()
@@ -31,17 +32,26 @@ private final class HelperRuntime: @unchecked Sendable {
     private func handle(_ action: HotkeyAction) {
         switch action {
         case .pressBegan:
-            controller.pressBegan()
+            audioReadyForPress = PermissionInspector.current().audioSupported
+            if audioReadyForPress { controller.pressBegan() }
         case .tap:
             Task {
-                await controller.tap()
+                if audioReadyForPress { await controller.tap() }
+                audioReadyForPress = false
                 emit(.tap())
             }
         case .holdStarted:
+            guard audioReadyForPress else {
+                requestPermissions()
+                emit(.error("Audio permissions are required. Grant the prompts, then hold Command+Return again."))
+                return
+            }
             holdStartedAt = Date()
             emit(.holdStarted())
             startProgressTimer()
         case .holdFinished:
+            guard audioReadyForPress else { return }
+            audioReadyForPress = false
             stopProgressTimer()
             emit(.transcribing())
             Task {
@@ -49,6 +59,7 @@ private final class HelperRuntime: @unchecked Sendable {
                 catch { emit(.error(error.localizedDescription)) }
             }
         case .holdCancelled:
+            audioReadyForPress = false
             stopProgressTimer()
             Task {
                 await controller.cancel()
@@ -94,15 +105,7 @@ private final class HelperRuntime: @unchecked Sendable {
         case "permissions":
             emit(.permissionState(PermissionInspector.current()))
         case "request-permissions":
-            PermissionInspector.requestAccessibility()
-            _ = PermissionInspector.requestScreen()
-            Task {
-                _ = await PermissionInspector.requestMicrophone()
-                _ = await PermissionInspector.requestSpeech()
-                let state = PermissionInspector.current()
-                emit(.permissionState(state))
-                if state.canOwnHotkey { startMonitor() }
-            }
+            requestPermissions()
         case "cancel":
             stopProgressTimer()
             Task {
@@ -113,6 +116,18 @@ private final class HelperRuntime: @unchecked Sendable {
             shutdown()
         default:
             emit(.error("Unsupported helper command: \(command.type)"))
+        }
+    }
+
+    private func requestPermissions() {
+        PermissionInspector.requestAccessibility()
+        _ = PermissionInspector.requestScreen()
+        Task {
+            _ = await PermissionInspector.requestMicrophone()
+            _ = await PermissionInspector.requestSpeech()
+            let state = PermissionInspector.current()
+            emit(.permissionState(state))
+            if state.canOwnHotkey { startMonitor() }
         }
     }
 

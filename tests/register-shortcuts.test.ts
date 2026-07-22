@@ -19,4 +19,16 @@ describe('registerShortcuts', () => {
     const results = registerShortcuts(() => {}, { register })
     expect(results.every((r) => !r.ok)).toBe(true)
   })
+
+  it('can omit screenshot ask when the native helper owns Command+Return', () => {
+    const accelerators: string[] = []
+    const results = registerShortcuts(
+      () => {},
+      { register: (accelerator) => { accelerators.push(accelerator); return true } },
+      undefined,
+      new Set<MainEvent>(['ask-screenshot'])
+    )
+    expect(results).toHaveLength(7)
+    expect(accelerators).not.toContain('CommandOrControl+Return')
+  })
 })
