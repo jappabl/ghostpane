@@ -8,6 +8,7 @@ public struct HelperEvent: Codable, Equatable, Sendable {
     public let durationMs: Int?
     public let message: String?
     public let elapsedMs: Int?
+    public let permissions: PermissionState?
 
     public init(
         protocolVersion: Int = 1,
@@ -16,7 +17,8 @@ public struct HelperEvent: Codable, Equatable, Sendable {
         systemTranscript: String? = nil,
         durationMs: Int? = nil,
         message: String? = nil,
-        elapsedMs: Int? = nil
+        elapsedMs: Int? = nil,
+        permissions: PermissionState? = nil
     ) {
         self.protocolVersion = protocolVersion
         self.type = type
@@ -25,6 +27,7 @@ public struct HelperEvent: Codable, Equatable, Sendable {
         self.durationMs = durationMs
         self.message = message
         self.elapsedMs = elapsedMs
+        self.permissions = permissions
     }
 
     public static func tap() -> HelperEvent { HelperEvent(type: "tap") }
@@ -47,6 +50,12 @@ public struct HelperEvent: Codable, Equatable, Sendable {
     public static func holdCancelled() -> HelperEvent { HelperEvent(type: "hold-cancelled") }
     public static func error(_ message: String) -> HelperEvent {
         HelperEvent(type: "error", message: message)
+    }
+    public static func ready(_ permissions: PermissionState) -> HelperEvent {
+        HelperEvent(type: "ready", permissions: permissions)
+    }
+    public static func permissionState(_ permissions: PermissionState) -> HelperEvent {
+        HelperEvent(type: "permission-state", permissions: permissions)
     }
 }
 
