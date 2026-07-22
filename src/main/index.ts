@@ -42,7 +42,12 @@ function onScreenshotError(err: unknown) {
 }
 
 function pushConfig() {
-  const cfg: AppConfig = { model: getSettings().model, logPath: getLogPath() }
+  const settings = getSettings()
+  const cfg: AppConfig = {
+    provider: settings.provider,
+    model: settings.models[settings.provider],
+    logPath: getLogPath()
+  }
   send(CHANNELS.config, cfg)
 }
 
@@ -53,7 +58,7 @@ function runAsk(prompt: string, imagePath?: string) {
   ask({
     prompt: prompt || 'Read the question or content on screen and answer concisely.',
     imagePath,
-    model: getSettings().model,
+    model: getSettings().models[getSettings().provider],
     onChunk: (text) => send(CHANNELS.answerChunk, { text }),
     onDone: () => { busy = false; send(CHANNELS.answerDone) },
     onError: (message) => { busy = false; log('error', 'ask error surfaced to UI', { message }); send(CHANNELS.answerError, { message }) },

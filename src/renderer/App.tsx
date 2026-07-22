@@ -11,7 +11,7 @@ export function App() {
   const [answer, setAnswer] = useState('')
   const [status, setStatus] = useState('') // main-driven: '' | '📸 Taking screenshot…' | '💭 Thinking…' …
   const [error, setError] = useState('')
-  const [config, setConfig] = useState<AppConfig>({ model: '', logPath: '' })
+  const [config, setConfig] = useState<AppConfig>({ provider: 'openai', model: '', logPath: '' })
   const inputRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)

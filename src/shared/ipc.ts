@@ -1,3 +1,5 @@
+import { modelsForProvider, type ProviderId } from './providers'
+
 export const CHANNELS = {
   mainEvent: 'main:event',        // main → renderer: MainEvent
   ask: 'renderer:ask',            // renderer → main: AskRequest
@@ -8,6 +10,7 @@ export const CHANNELS = {
   resize: 'renderer:resize',      // renderer → main: desired content height (px)
   config: 'main:config',          // main → renderer: AppConfig
   setModel: 'renderer:set-model', // renderer → main: model id string
+  setProvider: 'renderer:set-provider', // renderer → main: ProviderId
   status: 'main:status'           // main → renderer: status text ('' = clear)
 } as const
 
@@ -19,13 +22,13 @@ export interface AskRequest { prompt: string; withScreenshot: boolean }
 export interface AnswerChunk { text: string }
 export interface AnswerError { message: string }
 
-export interface ModelOption { id: string; label: string }
-// id is passed to `claude --model`; '' means the subscription default.
-export const MODELS: ModelOption[] = [
-  { id: '', label: 'Default' },
-  { id: 'opus', label: 'Opus' },
-  { id: 'sonnet', label: 'Sonnet' },
-  { id: 'haiku', label: 'Haiku' }
-]
+// Kept until the renderer migrates to the provider catalog.
+export { type ModelOption } from './providers'
+export { modelsForProvider }
+export const MODELS = modelsForProvider('claude')
 
-export interface AppConfig { model: string; logPath: string }
+export interface AppConfig {
+  provider: ProviderId
+  model: string
+  logPath: string
+}
