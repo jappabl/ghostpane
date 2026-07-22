@@ -1,3 +1,16 @@
+# Ghostpane v0.1.10
+
+### New in v0.1.10
+- **Mashing ⌘⏎ no longer breaks it.** Rapid presses used to fire overlapping
+  screen captures (and spawn a dozen Claude processes at once), causing random
+  "Failed to get sources" errors. Captures are now serialized — one at a time.
+- **Transient capture failures auto-retry.** The occasional first-capture-after-
+  launch hiccup now retries instead of erroring.
+- **Honest errors.** A capture failure while permission is *granted* no longer
+  wrongly claims "permission needed" or re-opens System Settings.
+
+---
+
 # Ghostpane v0.1.9
 
 ### New in v0.1.9 — Screen Recording permission finally sticks

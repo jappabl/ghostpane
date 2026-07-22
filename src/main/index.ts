@@ -10,6 +10,7 @@ import { CHANNELS, type MainEvent, type AskRequest, type AppConfig } from '../sh
 
 let win: BrowserWindow | null = null
 let clickThrough = false
+let busy = false // an ask (capture + Claude) is in flight; ignore new ones
 
 function send(channel: string, payload?: unknown) {
   win?.webContents.send(channel, payload)
@@ -32,7 +33,9 @@ function openScreenRecordingSettings() {
 }
 
 function onScreenshotError(err: unknown) {
+  busy = false
   log('error', 'screenshot capture failed', err)
+  // Only nudge toward Settings when permission is actually the problem.
   if (screenPermission() !== 'granted') openScreenRecordingSettings()
   reveal()
   send(CHANNELS.answerError, { message: (err as Error).message })
@@ -44,14 +47,15 @@ function pushConfig() {
 }
 
 function runAsk(prompt: string, imagePath?: string) {
+  busy = true
   reveal() // ensure the answer/error is actually visible
   ask({
     prompt: prompt || 'Read the question or content on screen and answer concisely.',
     imagePath,
     model: getSettings().model,
     onChunk: (text) => send(CHANNELS.answerChunk, { text }),
-    onDone: () => send(CHANNELS.answerDone),
-    onError: (message) => { log('error', 'ask error surfaced to UI', { message }); send(CHANNELS.answerError, { message }) },
+    onDone: () => { busy = false; send(CHANNELS.answerDone) },
+    onError: (message) => { busy = false; log('error', 'ask error surfaced to UI', { message }); send(CHANNELS.answerError, { message }) },
     onLog: (level, msg, extra) => log(level, msg, extra)
   })
 }
@@ -74,13 +78,15 @@ async function handleEvent(e: MainEvent) {
       send(CHANNELS.mainEvent, 'focus-input')
       break
     case 'ask-screenshot':
+      if (busy) { log('info', 'ignoring ⌘⏎ — an ask is already in flight'); break }
+      busy = true
       reveal() // make results visible; capture restores this state
       try {
         const path = await captureBehindOverlay(win)
         log('info', 'screenshot captured', { path })
-        runAsk('', path)
+        runAsk('', path) // keeps busy=true, clears it when Claude finishes
       } catch (err) {
-        onScreenshotError(err)
+        onScreenshotError(err) // clears busy
       }
       break
     case 'toggle-click-through':
@@ -127,8 +133,10 @@ app.whenReady().then(() => {
   log('info', 'shortcuts registered', { ok: results.filter((r) => r.ok).length, total: results.length })
 
   ipcMain.on(CHANNELS.ask, (_e, req: AskRequest) => {
+    if (busy) { log('info', 'ignoring UI ask — an ask is already in flight'); return }
     log('info', 'ask from UI', { withScreenshot: req.withScreenshot, promptLen: req.prompt.length })
     if (req.withScreenshot && win) {
+      busy = true
       reveal()
       captureBehindOverlay(win)
         .then((path) => runAsk(req.prompt, path))

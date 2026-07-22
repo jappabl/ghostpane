@@ -52,6 +52,7 @@ export function App() {
   const hasBody = Boolean(answer || thinking || error)
 
   function beginAsk(withScreenshot: boolean) {
+    if (thinking) return // one at a time — don't stack requests
     if (!withScreenshot && !prompt.trim()) return
     setAnswer(''); setError(''); setThinking(true)
     window.ghost.ask({ prompt, withScreenshot })

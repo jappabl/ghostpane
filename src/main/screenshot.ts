@@ -33,16 +33,23 @@ export async function captureBehindOverlay(win: BrowserWindow): Promise<string> 
       Math.round(display.bounds.width * display.scaleFactor),
       Math.round(display.bounds.height * display.scaleFactor)
     )
+    const opts = { types: ['screen'] as ('screen' | 'window')[], thumbnailSize: { width: px.width, height: px.height } }
     let sources
     try {
-      sources = await desktopCapturer.getSources({
-        types: ['screen'],
-        thumbnailSize: { width: px.width, height: px.height }
-      })
+      sources = await desktopCapturer.getSources(opts)
     } catch (e) {
-      // The macOS "Failed to get sources" case — almost always missing permission.
-      log('error', 'getSources threw', { status: screenPermission(), message: (e as Error).message })
-      throw new Error(PERM_HELP)
+      const status = screenPermission()
+      log('warn', 'getSources failed', { status, message: (e as Error).message })
+      if (status !== 'granted') throw new Error(PERM_HELP)
+      // Permission IS granted — this is a transient failure (first call after
+      // launch, or a rapid retry). Wait a beat and try once more.
+      await new Promise((r) => setTimeout(r, 250))
+      try {
+        sources = await desktopCapturer.getSources(opts)
+      } catch (e2) {
+        log('error', 'getSources failed again', { message: (e2 as Error).message })
+        throw new Error('Screen capture failed — press ⌘⏎ again.')
+      }
     }
     const source =
       sources.find((s) => String(s.display_id) === String(display.id)) ?? sources[0]
