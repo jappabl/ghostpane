@@ -1,14 +1,19 @@
-# Ghostpane v0.1.1
+# Ghostpane v0.1.2
 
 A translucent AI overlay that's **hidden from screen recording & screen
 sharing**, powered by your own Claude Pro/Max subscription (no API key). It grows
 to fit each answer and tucks away with a hotkey.
 
-### New in v0.1.1
-- **Auto-resizing window** — the overlay starts as a small bar and grows to fit
-  Claude's answer, then shrinks back for the next question (long answers scroll).
-- **Overlay-tuned answers** — Claude now replies answer-first, no preamble, with
-  code in fenced blocks and short lines that fit the narrow window.
+### New in v0.1.2
+- **Redesigned UI** — a minimalist Cluely-style glass command bar ("Ask
+  anything…" with a brand dot and a screenshot button) floating above a separate
+  answer card, with backdrop blur, ⌘-key chips, and a slide-in animation.
+
+### Earlier (v0.1.1)
+- **Auto-resizing window** — starts as a small bar and grows to fit Claude's
+  answer, then shrinks back (long answers scroll).
+- **Overlay-tuned answers** — answer-first, no preamble, code in fenced blocks,
+  short lines that fit the narrow window.
 
 ---
 

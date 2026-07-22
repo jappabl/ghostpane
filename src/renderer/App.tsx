@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { Answer } from './components/Answer'
+import Markdown from 'react-markdown'
+import { CameraIcon } from './components/Icons'
 
 // Cap the overlay at ~85% of the screen; taller answers scroll inside.
 const MAX_H = Math.floor((window.screen?.availHeight ?? 900) * 0.85)
@@ -7,16 +8,16 @@ const MAX_H = Math.floor((window.screen?.availHeight ?? 900) * 0.85)
 export function App() {
   const [prompt, setPrompt] = useState('')
   const [answer, setAnswer] = useState('')
-  const [status, setStatus] = useState('')
+  const [thinking, setThinking] = useState(false)
   const [error, setError] = useState('')
   const inputRef = useRef<HTMLInputElement>(null)
-  const answerRef = useRef<HTMLDivElement>(null)
-  const appRef = useRef<HTMLDivElement>(null)
+  const bodyRef = useRef<HTMLDivElement>(null)
+  const rootRef = useRef<HTMLDivElement>(null)
   const lastH = useRef(0)
 
-  // Report the app's natural height to main so the window fits the content.
+  // Report the content height to main so the window fits the floating pieces.
   useLayoutEffect(() => {
-    const el = appRef.current
+    const el = rootRef.current
     if (!el) return
     const report = () => {
       const h = Math.ceil(el.getBoundingClientRect().height)
@@ -29,48 +30,66 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    window.ghost.onAnswerChunk((c) => { setAnswer((a) => a + c.text); setStatus('') })
-    window.ghost.onAnswerDone(() => setStatus(''))
-    window.ghost.onAnswerError((e) => { setError(e.message); setStatus('') })
+    window.ghost.onAnswerChunk((c) => { setAnswer((a) => a + c.text); setThinking(false) })
+    window.ghost.onAnswerDone(() => setThinking(false))
+    window.ghost.onAnswerError((e) => { setError(e.message); setThinking(false) })
     window.ghost.onMainEvent((e) => {
       if (e === 'focus-input') inputRef.current?.focus()
-      if (e === 'scroll-up') answerRef.current?.scrollBy({ top: -140 })
-      if (e === 'scroll-down') answerRef.current?.scrollBy({ top: 140 })
+      if (e === 'scroll-up') bodyRef.current?.scrollBy({ top: -140 })
+      if (e === 'scroll-down') bodyRef.current?.scrollBy({ top: 140 })
     })
   }, [])
 
-  // Follow the stream: keep the newest text in view as it arrives.
+  // Follow the stream: keep the newest text in view.
   useEffect(() => {
-    const el = answerRef.current
+    const el = bodyRef.current
     if (el) el.scrollTop = el.scrollHeight
   }, [answer])
 
-  const hasBody = Boolean(answer || status || error)
+  const hasBody = Boolean(answer || thinking || error)
 
   function beginAsk(withScreenshot: boolean) {
-    setAnswer(''); setError(''); setStatus('Thinking…')
+    if (!withScreenshot && !prompt.trim()) return
+    setAnswer(''); setError(''); setThinking(true)
     window.ghost.ask({ prompt, withScreenshot })
   }
 
   return (
-    <div className="app" ref={appRef} style={{ maxHeight: MAX_H }}>
-      <div className="row">
+    <div className="root" ref={rootRef} style={{ maxHeight: MAX_H }}>
+      <div className="bar glass">
+        <span className={'dot' + (thinking ? ' live' : '')} />
         <input
           ref={inputRef}
-          className="input"
-          placeholder="Ask Claude… (Enter to send)"
+          className="ask"
+          placeholder="Ask anything…"
           value={prompt}
           onChange={(e) => setPrompt(e.target.value)}
           onKeyDown={(e) => { if (e.key === 'Enter') beginAsk(false) }}
         />
-        <button className="btn" onClick={() => beginAsk(true)}>Shot+Ask</button>
+        <div className="bar-actions">
+          <button className="iconbtn" title="Screenshot & ask (⌘⏎)" onClick={() => beginAsk(true)}>
+            <CameraIcon />
+          </button>
+          <kbd className="kbd">⌘⏎</kbd>
+        </div>
       </div>
+
       {hasBody && (
-        <div className="answer-wrap" ref={answerRef}>
-          <Answer text={answer} status={status} error={error} />
+        <div className="panel glass">
+          <div className="panel-body" ref={bodyRef}>
+            {error
+              ? <div className="error">{error}</div>
+              : thinking && !answer
+                ? <div className="thinking"><span className="d" /><span className="d" /><span className="d" /> Thinking…</div>
+                : <Markdown>{answer}</Markdown>}
+          </div>
+          <div className="panel-foot">
+            <span>⌘\ hide</span>
+            <span>⌘↑ ⌘↓ scroll</span>
+            <span>⌘⇧\ click-through</span>
+          </div>
         </div>
       )}
-      <div className="hint">⌘\ toggle · ⌘⏎ screenshot+ask · ⌘⇧Space focus · ⌘⇧\ click-through</div>
     </div>
   )
 }

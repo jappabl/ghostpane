@@ -6,3 +6,4 @@ out/
 .vite/
 release/
 verify-out/
+.preview/
