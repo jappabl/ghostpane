@@ -1,6 +1,18 @@
 import { BrowserWindow, app, screen } from 'electron'
 import { join } from 'path'
 
+// Makes the overlay follow the user everywhere: above all windows, onto every
+// Space, and over other apps' full-screen windows. skipTransformProcessType is
+// required for a dock-hidden (accessory) app to keep joining all Spaces without
+// macOS flipping its activation policy. Safe to call repeatedly (re-assert on show).
+export function applyFollowBehavior(win: BrowserWindow): void {
+  win.setAlwaysOnTop(true, 'screen-saver')
+  win.setVisibleOnAllWorkspaces(true, {
+    visibleOnFullScreenWorkspaces: true,
+    skipTransformProcessType: true
+  } as Electron.VisibleOnAllWorkspacesOptions)
+}
+
 export function createOverlay(preloadPath: string, loadUrl: string | null): BrowserWindow {
   const win = new BrowserWindow({
     width: 520,
@@ -21,13 +33,13 @@ export function createOverlay(preloadPath: string, loadUrl: string | null): Brow
   })
 
   win.setContentProtection(true)
-  win.setAlwaysOnTop(true, 'screen-saver')
-  win.setVisibleOnAllWorkspaces(true, { visibleOnFullScreenWorkspaces: true } as Electron.VisibleOnAllWorkspacesOptions)
 
   if (process.platform === 'darwin') {
     app.dock?.hide()
     win.setWindowButtonVisibility?.(false)
   }
+
+  applyFollowBehavior(win)
 
   // Anchor near the top-center so the window grows downward as answers stream.
   const wa = screen.getPrimaryDisplay().workArea

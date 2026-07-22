@@ -1,6 +1,6 @@
 import { app, globalShortcut, ipcMain, screen, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
-import { createOverlay } from './overlay-window'
+import { createOverlay, applyFollowBehavior } from './overlay-window'
 import { registerShortcuts } from './register-shortcuts'
 import { captureBehindOverlay } from './screenshot'
 import { ask, resolveClaude } from './claude'
@@ -15,13 +15,21 @@ function send(channel: string, payload?: unknown) {
   win?.webContents.send(channel, payload)
 }
 
+// Show the overlay without stealing focus, re-asserting its follow-everywhere
+// behaviour (survives Space switches and other apps going full-screen).
+function reveal() {
+  if (!win) return
+  applyFollowBehavior(win)
+  win.showInactive()
+}
+
 function pushConfig() {
   const cfg: AppConfig = { model: getSettings().model, logPath: getLogPath() }
   send(CHANNELS.config, cfg)
 }
 
 function runAsk(prompt: string, imagePath?: string) {
-  win?.showInactive() // ensure the answer/error is actually visible
+  reveal() // ensure the answer/error is actually visible
   ask({
     prompt: prompt || 'Read the question or content on screen and answer concisely.',
     imagePath,
@@ -38,19 +46,20 @@ async function handleEvent(e: MainEvent) {
   log('info', 'shortcut', { event: e })
   switch (e) {
     case 'toggle':
-      win.isVisible() ? win.hide() : win.showInactive()
+      win.isVisible() ? win.hide() : reveal()
       break
     case 'focus-input':
       // The ONLY place we deliberately take focus — the user explicitly asked
       // to type. app.focus({steal}) is needed for a dock-hidden accessory app
       // to actually receive keystrokes on macOS. Everywhere else stays inactive.
+      applyFollowBehavior(win)
       win.show()
       if (process.platform === 'darwin') app.focus({ steal: true })
       win.focus()
       send(CHANNELS.mainEvent, 'focus-input')
       break
     case 'ask-screenshot':
-      win.showInactive() // make results visible; capture restores this state
+      reveal() // make results visible; capture restores this state
       try {
         const path = await captureBehindOverlay(win)
         log('info', 'screenshot captured', { path })
@@ -101,7 +110,7 @@ app.whenReady().then(() => {
   ipcMain.on(CHANNELS.ask, (_e, req: AskRequest) => {
     log('info', 'ask from UI', { withScreenshot: req.withScreenshot, promptLen: req.prompt.length })
     if (req.withScreenshot && win) {
-      win.showInactive()
+      reveal()
       captureBehindOverlay(win)
         .then((path) => runAsk(req.prompt, path))
         .catch((err) => { log('error', 'screenshot capture failed', err); win?.showInactive(); send(CHANNELS.answerError, { message: (err as Error).message }) })
