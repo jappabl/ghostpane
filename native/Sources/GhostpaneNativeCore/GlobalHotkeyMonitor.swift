@@ -5,6 +5,14 @@ public func isCommandReturn(keyCode: Int64, commandPressed: Bool, isRepeat: Bool
     keyCode == 36 && commandPressed && !isRepeat
 }
 
+public func shouldFinishCommandReturn(keyCode: Int64, pressActive: Bool) -> Bool {
+    keyCode == 36 && pressActive
+}
+
+public func shouldSuppressActiveReturnKeyDown(keyCode: Int64, pressActive: Bool) -> Bool {
+    keyCode == 36 && pressActive
+}
+
 public final class GlobalHotkeyMonitor: @unchecked Sendable {
     private let stateMachine: HotkeyStateMachine
     private let clock = ContinuousClock()
@@ -12,6 +20,8 @@ public final class GlobalHotkeyMonitor: @unchecked Sendable {
     private var eventTap: CFMachPort?
     private var runLoopSource: CFRunLoopSource?
     private var thresholdWorkItem: DispatchWorkItem?
+    private var pressActive = false
+    private var suppressNextReturnKeyUp = false
 
     public init(emit: @escaping (HotkeyAction) -> Void) {
         self.stateMachine = HotkeyStateMachine(emit: emit)
@@ -21,7 +31,8 @@ public final class GlobalHotkeyMonitor: @unchecked Sendable {
     public func start() -> Bool {
         guard eventTap == nil else { return true }
         let eventMask = (1 << CGEventType.keyDown.rawValue) |
-            (1 << CGEventType.keyUp.rawValue)
+            (1 << CGEventType.keyUp.rawValue) |
+            (1 << CGEventType.flagsChanged.rawValue)
         let pointer = Unmanaged.passUnretained(self).toOpaque()
         guard let tap = CGEvent.tapCreate(
             tap: .cgSessionEventTap,
@@ -48,6 +59,8 @@ public final class GlobalHotkeyMonitor: @unchecked Sendable {
         thresholdWorkItem?.cancel()
         thresholdWorkItem = nil
         stateMachine.cancel()
+        pressActive = false
+        suppressNextReturnKeyUp = false
         if let source = runLoopSource {
             CFRunLoopRemoveSource(CFRunLoopGetMain(), source, .commonModes)
         }
@@ -67,9 +80,22 @@ public final class GlobalHotkeyMonitor: @unchecked Sendable {
         let isRepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
         let commandPressed = event.flags.contains(.maskCommand)
 
+        if type == .flagsChanged && pressActive && !commandPressed {
+            finishPress()
+            suppressNextReturnKeyUp = true
+            return Unmanaged.passUnretained(event)
+        }
+
+        if type == .keyDown && shouldSuppressActiveReturnKeyDown(
+            keyCode: keyCode, pressActive: pressActive
+        ) {
+            return nil
+        }
+
         if type == .keyDown && isCommandReturn(
             keyCode: keyCode, commandPressed: commandPressed, isRepeat: isRepeat
         ) {
+            pressActive = true
             let now = elapsed()
             stateMachine.keyDown(at: now)
             thresholdWorkItem?.cancel()
@@ -81,13 +107,24 @@ public final class GlobalHotkeyMonitor: @unchecked Sendable {
             DispatchQueue.main.asyncAfter(deadline: .now() + .milliseconds(350), execute: item)
             return nil
         }
-        if type == .keyUp && keyCode == 36 && commandPressed {
-            thresholdWorkItem?.cancel()
-            thresholdWorkItem = nil
-            stateMachine.keyUp(at: elapsed())
+        if type == .keyUp && shouldFinishCommandReturn(
+            keyCode: keyCode, pressActive: pressActive
+        ) {
+            finishPress()
+            return nil
+        }
+        if type == .keyUp && keyCode == 36 && suppressNextReturnKeyUp {
+            suppressNextReturnKeyUp = false
             return nil
         }
         return Unmanaged.passUnretained(event)
+    }
+
+    private func finishPress() {
+        thresholdWorkItem?.cancel()
+        thresholdWorkItem = nil
+        pressActive = false
+        stateMachine.keyUp(at: elapsed())
     }
 
     deinit { stop() }

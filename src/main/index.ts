@@ -73,7 +73,9 @@ function pushConfig() {
 function runAsk(prompt: string, imagePath?: string) {
   busy = true
   const settings = getSettings()
-  const owned = new OwnedPaths()
+  const owned = new OwnedPaths(undefined, (path, error) => {
+    log('warn', 'temporary screenshot cleanup failed', { path, error })
+  })
   activeOwners.add(owned)
   if (imagePath) owned.add(imagePath)
   const finish = () => {

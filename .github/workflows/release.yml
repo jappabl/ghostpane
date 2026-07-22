@@ -26,8 +26,6 @@ jobs:
     runs-on: macos-latest
     env:
       GHOSTPANE_REQUIRE_SIGNING: '1'
-      CERTIFICATE_BASE64: ${{ secrets.GHOSTPANE_CERT_P12_BASE64 }}
-      CERTIFICATE_PASSWORD: ${{ secrets.GHOSTPANE_CERT_PASSWORD }}
       SIGNING_KEYCHAIN: ${{ runner.temp }}/ghostpane-signing.keychain-db
     steps:
       - uses: actions/checkout@v4
@@ -39,6 +37,9 @@ jobs:
 
       - name: Import signing identity
         shell: bash
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.GHOSTPANE_CERT_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.GHOSTPANE_CERT_PASSWORD }}
         run: |
           set -euo pipefail
           test -n "$CERTIFICATE_BASE64" || { echo "GHOSTPANE_CERT_P12_BASE64 is missing" >&2; exit 1; }

@@ -1,5 +1,6 @@
 import Foundation
 import GhostpaneNativeCore
+import Darwin
 
 private final class HelperRuntime: @unchecked Sendable {
     private let writer = ProtocolWriter()
@@ -11,11 +12,14 @@ private final class HelperRuntime: @unchecked Sendable {
     private var progressTimer: DispatchSourceTimer?
     private var holdStartedAt: Date?
     private var audioReadyForPress = false
+    private var signalSources: [DispatchSourceSignal] = []
+    private var shuttingDown = false
 
     func run() {
         let permissions = PermissionInspector.current()
         emit(.ready(permissions))
         if permissions.canOwnHotkey { startMonitor() }
+        installSignalHandlers()
         startCommandReader()
         RunLoop.main.run()
     }
@@ -42,8 +46,9 @@ private final class HelperRuntime: @unchecked Sendable {
             }
         case .holdStarted:
             guard audioReadyForPress else {
-                requestPermissions()
-                emit(.error("Audio permissions are required. Grant the prompts, then hold Command+Return again."))
+                let state = PermissionInspector.current()
+                if state.macOSMajor >= 14 { requestPermissions() }
+                emit(.error(audioUnavailableMessage(state)))
                 return
             }
             holdStartedAt = Date()
@@ -131,6 +136,28 @@ private final class HelperRuntime: @unchecked Sendable {
         }
     }
 
+    private func audioUnavailableMessage(_ state: PermissionState) -> String {
+        guard state.macOSMajor >= 14 else {
+            return "Held microphone and system-audio capture requires macOS 14 or newer. Tap Command+Return for a screenshot-only ask."
+        }
+        var missing: [String] = []
+        if state.accessibility != .granted { missing.append("Accessibility") }
+        if state.microphone != .granted { missing.append("Microphone") }
+        if state.screen != .granted { missing.append("Screen Recording") }
+        if state.speech != .granted { missing.append("Speech Recognition") }
+        return "Grant Ghostpane \(missing.joined(separator: ", ")) permission in Privacy & Security, restart if macOS asks, then hold Command+Return again."
+    }
+
+    private func installSignalHandlers() {
+        for signalNumber in [SIGTERM, SIGINT] {
+            Darwin.signal(signalNumber, SIG_IGN)
+            let source = DispatchSource.makeSignalSource(signal: signalNumber, queue: .main)
+            source.setEventHandler { [weak self] in self?.shutdown() }
+            signalSources.append(source)
+            source.resume()
+        }
+    }
+
     private func emit(_ event: HelperEvent) {
         do { try writer.write(event) }
         catch {
@@ -139,9 +166,13 @@ private final class HelperRuntime: @unchecked Sendable {
     }
 
     private func shutdown() {
+        guard !shuttingDown else { return }
+        shuttingDown = true
         stopProgressTimer()
         monitor?.stop()
         monitor = nil
+        signalSources.forEach { $0.cancel() }
+        signalSources.removeAll()
         Task {
             await controller.cancel()
             Foundation.exit(EXIT_SUCCESS)

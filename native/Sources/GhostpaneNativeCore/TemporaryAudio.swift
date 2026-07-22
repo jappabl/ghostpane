@@ -17,8 +17,14 @@ public final class AudioArtifacts: @unchecked Sendable {
         let root = FileManager.default.temporaryDirectory
             .appendingPathComponent("ghostpane-audio", isDirectory: true)
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o700], ofItemAtPath: root.path
+        )
         let directory = root.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: directory, withIntermediateDirectories: false)
+        try FileManager.default.setAttributes(
+            [.posixPermissions: 0o700], ofItemAtPath: directory.path
+        )
         return AudioArtifacts(
             directoryURL: directory,
             microphoneURL: directory.appendingPathComponent("microphone.caf"),

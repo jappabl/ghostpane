@@ -19,6 +19,12 @@ public enum SpeechTranscriberError: LocalizedError {
     }
 }
 
+public func isNoSpeechRecognitionError(_ error: Error) -> Bool {
+    let value = error as NSError
+    return (value.domain == "kAFAssistantErrorDomain" && value.code == 1110) ||
+        value.localizedDescription.localizedCaseInsensitiveContains("no speech")
+}
+
 private final class RecognitionCompletion: @unchecked Sendable {
     private let lock = NSLock()
     private var completed = false
@@ -63,7 +69,11 @@ public struct SpeechTranscriber: SpeechTranscribing {
                         .trimmingCharacters(in: .whitespacesAndNewlines)
                     continuation.resume(returning: text.isEmpty ? "No speech detected" : text)
                 } else if let error, completion.claim() {
-                    continuation.resume(throwing: error)
+                    if isNoSpeechRecognitionError(error) {
+                        continuation.resume(returning: "No speech detected")
+                    } else {
+                        continuation.resume(throwing: error)
+                    }
                 }
             }
         }

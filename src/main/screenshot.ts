@@ -27,7 +27,7 @@ export const PERM_HELP =
   'Applications folder (NOT opened from the disk image). 2) Enable "Ghostpane" ' +
   'under System Settings → Privacy & Security → Screen Recording (I just opened it). ' +
   '3) QUIT (⌘⇧Q) and reopen. If it was already checked, UNcheck and re-check it. ' +
-  'After an update you may need to re-enable it (unsigned app).'
+  'After replacing the app, macOS may ask you to re-enable it.'
 
 export async function captureBehindOverlay(win: BrowserWindow): Promise<string> {
   const perm = screenPermission()
@@ -69,7 +69,7 @@ export async function captureBehindOverlay(win: BrowserWindow): Promise<string> 
     const png = source.thumbnail.toPNG()
     if (png.length === 0) throw new Error(PERM_HELP)
     const path = join(app.getPath('temp'), `ghostpane-${Date.now()}-${counter++}.png`)
-    await writeFile(path, png)
+    await writeFile(path, png, { mode: 0o600 })
     return path
   } finally {
     if (wasVisible) win.showInactive()

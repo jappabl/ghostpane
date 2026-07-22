@@ -23,6 +23,15 @@ describe('OwnedPaths', () => {
     expect(unlink).toHaveBeenCalledTimes(2)
   })
 
+  it('reports cleanup failures without throwing', async () => {
+    const error = new Error('busy')
+    const report = vi.fn()
+    const owned = new OwnedPaths(vi.fn().mockRejectedValue(error), report)
+    owned.add('/tmp/a.png')
+    await expect(owned.cleanup()).resolves.toBeUndefined()
+    expect(report).toHaveBeenCalledWith('/tmp/a.png', error)
+  })
+
   it('does not delete a released path', async () => {
     const unlink = vi.fn().mockResolvedValue(undefined)
     const owned = new OwnedPaths(unlink)

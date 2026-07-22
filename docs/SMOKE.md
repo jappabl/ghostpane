@@ -15,7 +15,7 @@ has been run first. Held audio requires macOS 14 or newer.
 | 8 | Hold ⌘⏎ while speaking over system audio → both sources are labeled separately. | |
 | 9 | With Accessibility granted, deny Microphone or Speech Recognition → tap still screenshots and hold gives an actionable permission error. | |
 | 10 | Deny Accessibility → the fallback shortcut still screenshots and opens permission setup on first use. | |
-| 11 | After a completed, cancelled, and failed hold, no `ghostpane-audio-*` directories remain in the system temporary directory. | |
+| 11 | After a completed, cancelled, and failed hold, the `ghostpane-audio/` directory in the system temporary directory is empty. | |
 | 12 | Press ⌘⇧\ → clicks pass through the overlay to the app beneath. Press again to turn off. | |
 | 13 | With the overlay shown, type into an editor beneath it → keystrokes land in the editor (overlay did not steal focus). | |
 | 14 | The window grows to fit a long answer, then shrinks back on the next question. | |
