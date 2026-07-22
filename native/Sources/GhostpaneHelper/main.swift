@@ -14,6 +14,8 @@ private final class HelperRuntime: @unchecked Sendable {
     private var audioReadyForPress = false
     private var signalSources: [DispatchSourceSignal] = []
     private var shuttingDown = false
+    private var processingHold = false
+    private var ignoringCurrentPress = false
 
     func run() {
         let permissions = PermissionInspector.current()
@@ -36,15 +38,23 @@ private final class HelperRuntime: @unchecked Sendable {
     private func handle(_ action: HotkeyAction) {
         switch action {
         case .pressBegan:
+            ignoringCurrentPress = processingHold
+            if ignoringCurrentPress { return }
             audioReadyForPress = PermissionInspector.current().audioSupported
             if audioReadyForPress { controller.pressBegan() }
         case .tap:
+            if ignoringCurrentPress {
+                ignoringCurrentPress = false
+                return
+            }
+            let shouldCancelAudio = audioReadyForPress
+            audioReadyForPress = false
             Task {
-                if audioReadyForPress { await controller.tap() }
-                audioReadyForPress = false
+                if shouldCancelAudio { await controller.tap() }
                 emit(.tap())
             }
         case .holdStarted:
+            if ignoringCurrentPress { return }
             guard audioReadyForPress else {
                 let state = PermissionInspector.current()
                 if state.macOSMajor >= 14 { requestPermissions() }
@@ -55,15 +65,25 @@ private final class HelperRuntime: @unchecked Sendable {
             emit(.holdStarted())
             startProgressTimer()
         case .holdFinished:
+            if ignoringCurrentPress {
+                ignoringCurrentPress = false
+                return
+            }
             guard audioReadyForPress else { return }
             audioReadyForPress = false
+            processingHold = true
             stopProgressTimer()
             emit(.transcribing())
             Task {
                 do { emit(try await controller.holdFinished()) }
                 catch { emit(.error(error.localizedDescription)) }
+                await MainActor.run { self.processingHold = false }
             }
         case .holdCancelled:
+            if ignoringCurrentPress {
+                ignoringCurrentPress = false
+                return
+            }
             audioReadyForPress = false
             stopProgressTimer()
             Task {
@@ -131,8 +151,10 @@ private final class HelperRuntime: @unchecked Sendable {
             _ = await PermissionInspector.requestMicrophone()
             _ = await PermissionInspector.requestSpeech()
             let state = PermissionInspector.current()
-            emit(.permissionState(state))
-            if state.canOwnHotkey { startMonitor() }
+            await MainActor.run {
+                emit(.permissionState(state))
+                if state.canOwnHotkey { startMonitor() }
+            }
         }
     }
 
@@ -175,6 +197,7 @@ private final class HelperRuntime: @unchecked Sendable {
         signalSources.removeAll()
         Task {
             await controller.cancel()
+            AudioArtifacts.cleanupProcessTemporaryAudio()
             Foundation.exit(EXIT_SUCCESS)
         }
     }

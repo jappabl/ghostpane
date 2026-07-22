@@ -34,4 +34,15 @@ final class TemporaryAudioTests: XCTestCase {
         XCTAssertTrue(first.microphoneURL.path.hasSuffix("microphone.caf"))
         XCTAssertTrue(first.systemURL.path.hasSuffix("system.m4a"))
     }
+
+    func testProcessCleanupRemovesInterruptedRecordings() throws {
+        let artifacts = try AudioArtifacts.makeEmpty()
+        FileManager.default.createFile(
+            atPath: artifacts.microphoneURL.path, contents: Data("private".utf8)
+        )
+
+        AudioArtifacts.cleanupProcessTemporaryAudio()
+
+        XCTAssertFalse(FileManager.default.fileExists(atPath: artifacts.directoryURL.path))
+    }
 }
