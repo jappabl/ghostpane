@@ -108,20 +108,22 @@ You need to know if your Mac is **Apple Silicon** or **Intel**:
 
 ## Step 5 — Open it the first time (get past the security warning)
 
-Because this app isn't signed with a paid Apple certificate, macOS blocks it on
-the first launch. This is expected — here's how to open it anyway:
+Because this app isn't notarized by Apple, macOS blocks a freshly-downloaded copy.
+You'll likely see **"Ghostpane is damaged and can't be opened."** — it is **not**
+damaged; that's just how macOS treats non-notarized downloads. Clear it with one
+command:
 
-1. Open your **Applications** folder (in Finder, press `Cmd+Shift+A`).
-2. **Right-click** (or Control-click) **Ghostpane** → choose **Open**.
-3. A dialog says *"macOS cannot verify the developer…"* — click the **Open**
-   button in that dialog.
+1. Make sure **Ghostpane** is in your **Applications** folder.
+2. Open **Terminal** and run:
+   ```bash
+   xattr -cr /Applications/Ghostpane.app
+   ```
+   (This removes the "downloaded from the internet" quarantine flag. It does not
+   modify the app.)
+3. Now open Ghostpane from Applications normally.
 
-   - If you see **no Open button** (just "Move to Trash" / "Cancel", common on
-     newer macOS): click **Cancel**, then go to **System Settings → Privacy &
-     Security**, scroll down to the message *"Ghostpane was blocked…"*, and click
-     **Open Anyway**. Then repeat the right-click → Open.
-
-You only have to do this **once**. After that it opens normally.
+You only do this **once per download**. (The real cure for the "damaged" prompt is
+Apple notarization, which needs a paid Apple Developer account.)
 
 ## Step 6 — Grant Screen Recording permission
 

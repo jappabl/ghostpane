@@ -12,8 +12,13 @@ so once you grant it, the grant **survives updates**.
 3. Turn **Ghostpane** on.
 4. **Quit (`⌘⇧Q`) and reopen.** Done — `⌘⏎` now works and stays working.
 
-(It's signed with a self-signed cert, not an Apple Developer ID, so Gatekeeper
-still needs a one-time right-click → **Open** on first launch.)
+**If you see "Ghostpane is damaged and can't be opened"** — it isn't damaged.
+macOS shows that for any non-notarized downloaded app. Fix it once with:
+```bash
+xattr -cr /Applications/Ghostpane.app
+```
+then open it normally. (The permanent cure is Apple notarization, which needs a
+paid Apple Developer account.)
 
 ---
 
