@@ -2,6 +2,10 @@ appId: com.ghostpane.app
 productName: Ghostpane
 directories:
   output: release
+# Sign the packed app with our stable self-signed identity (see build/afterPack.cjs)
+# so the Screen Recording grant survives updates. electron-builder skips untrusted
+# identities itself, so signing happens in the hook.
+afterPack: build/afterPack.cjs
 files:
   - out/**/*
   - package.json
@@ -12,9 +16,6 @@ mac:
       arch:
         - arm64
         - x64
-  # Unsigned by default. To sign + notarize later, add:
-  #   identity: "Developer ID Application: Your Name (TEAMID)"
-  #   notarize: { teamId: "TEAMID" }
 win:
   target:
     - nsis

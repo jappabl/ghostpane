@@ -1,3 +1,22 @@
+# Ghostpane v0.1.9
+
+### New in v0.1.9 — Screen Recording permission finally sticks
+The real reason `⌘⏎` kept saying "no access" no matter how many times you granted
+it: the app was **unsigned**, so every update changed its identity and macOS wiped
+the Screen Recording grant. Ghostpane is now **code-signed with a stable identity**,
+so once you grant it, the grant **survives updates**.
+
+**One-time setup (do this once):**
+1. Move **Ghostpane** to your **Applications** folder and open it from there.
+2. Press `⌘⏎` — it opens System Settings → Privacy & Security → Screen Recording.
+3. Turn **Ghostpane** on.
+4. **Quit (`⌘⇧Q`) and reopen.** Done — `⌘⏎` now works and stays working.
+
+(It's signed with a self-signed cert, not an Apple Developer ID, so Gatekeeper
+still needs a one-time right-click → **Open** on first launch.)
+
+---
+
 # Ghostpane v0.1.8
 
 ### New in v0.1.8
