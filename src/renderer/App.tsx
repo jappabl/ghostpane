@@ -9,7 +9,7 @@ const MAX_H = Math.floor((window.screen?.availHeight ?? 900) * 0.85)
 export function App() {
   const [prompt, setPrompt] = useState('')
   const [answer, setAnswer] = useState('')
-  const [thinking, setThinking] = useState(false)
+  const [status, setStatus] = useState('') // main-driven: '' | '📸 Taking screenshot…' | '💭 Thinking…' …
   const [error, setError] = useState('')
   const [config, setConfig] = useState<AppConfig>({ model: '', logPath: '' })
   const inputRef = useRef<HTMLInputElement>(null)
@@ -32,9 +32,11 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    window.ghost.onAnswerChunk((c) => { setAnswer((a) => a + c.text); setThinking(false) })
-    window.ghost.onAnswerDone(() => setThinking(false))
-    window.ghost.onAnswerError((e) => { setError(e.message); setThinking(false) })
+    window.ghost.onAnswerChunk((c) => { setStatus(''); setAnswer((a) => a + c.text) })
+    window.ghost.onAnswerDone(() => setStatus(''))
+    window.ghost.onAnswerError((e) => { setStatus(''); setError(e.message) })
+    // Main drives status through each phase; a new status starts a fresh answer.
+    window.ghost.onStatus((s) => { if (s) { setAnswer(''); setError(''); setStatus(s) } else setStatus('') })
     window.ghost.onConfig((c) => setConfig(c))
     window.ghost.onMainEvent((e) => {
       if (e === 'focus-input') inputRef.current?.focus()
@@ -49,12 +51,13 @@ export function App() {
     if (el) el.scrollTop = el.scrollHeight
   }, [answer])
 
-  const hasBody = Boolean(answer || thinking || error)
+  const busyUI = Boolean(status)
+  const hasBody = Boolean(answer || status || error)
 
   function beginAsk(withScreenshot: boolean) {
-    if (thinking) return // one at a time — don't stack requests
+    if (busyUI) return // one at a time — don't stack requests
     if (!withScreenshot && !prompt.trim()) return
-    setAnswer(''); setError(''); setThinking(true)
+    setAnswer(''); setError(''); setStatus('💭 Thinking…')
     window.ghost.ask({ prompt, withScreenshot })
     setPrompt('') // clear the box so it's ready for the next question
   }
@@ -62,7 +65,7 @@ export function App() {
   return (
     <div className="root" ref={rootRef} style={{ maxHeight: MAX_H }}>
       <div className="bar glass">
-        <span className={'dot' + (thinking ? ' live' : '')} />
+        <span className={'dot' + (busyUI ? ' live' : '')} />
         <input
           ref={inputRef}
           className="ask"
@@ -96,9 +99,9 @@ export function App() {
                   <div className="error-msg">{error}</div>
                   <div className="error-log">Logs: {config.logPath || '~/Library/Logs/Ghostpane'} · press ⌘⇧L to open</div>
                 </div>
-              : thinking && !answer
-                ? <div className="thinking"><span className="d" /><span className="d" /><span className="d" /> Thinking…</div>
-                : <Markdown>{answer}</Markdown>}
+              : answer
+                ? <Markdown>{answer}</Markdown>
+                : <div className="thinking"><span className="d" /><span className="d" /><span className="d" /> {status}</div>}
           </div>
           <div className="panel-foot">
             <span>⌘\ hide</span>

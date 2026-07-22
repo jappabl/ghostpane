@@ -49,6 +49,7 @@ function pushConfig() {
 function runAsk(prompt: string, imagePath?: string) {
   busy = true
   reveal() // ensure the answer/error is actually visible
+  send(CHANNELS.status, imagePath ? '📸 Reading your screen…' : '💭 Thinking…')
   ask({
     prompt: prompt || 'Read the question or content on screen and answer concisely.',
     imagePath,
@@ -81,10 +82,11 @@ async function handleEvent(e: MainEvent) {
       if (busy) { log('info', 'ignoring ⌘⏎ — an ask is already in flight'); break }
       busy = true
       reveal() // make results visible; capture restores this state
+      send(CHANNELS.status, '📸 Taking screenshot…')
       try {
         const path = await captureBehindOverlay(win)
         log('info', 'screenshot captured', { path })
-        runAsk('', path) // keeps busy=true, clears it when Claude finishes
+        runAsk('', path) // keeps busy=true, sends its own status, clears on finish
       } catch (err) {
         onScreenshotError(err) // clears busy
       }

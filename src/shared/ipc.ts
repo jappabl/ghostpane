@@ -7,7 +7,8 @@ export const CHANNELS = {
   setClickThrough: 'renderer:set-click-through', // renderer → main: boolean
   resize: 'renderer:resize',      // renderer → main: desired content height (px)
   config: 'main:config',          // main → renderer: AppConfig
-  setModel: 'renderer:set-model'  // renderer → main: model id string
+  setModel: 'renderer:set-model', // renderer → main: model id string
+  status: 'main:status'           // main → renderer: status text ('' = clear)
 } as const
 
 export type MainEvent =

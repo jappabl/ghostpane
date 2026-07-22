@@ -1,3 +1,12 @@
+# Ghostpane v0.1.12
+
+### New in v0.1.12
+- **Live status while it works.** Press ⌘⏎ and you now see the phases — "📸 Taking
+  screenshot…" → "📸 Reading your screen…" → the streamed answer (with animated
+  dots), instead of staring at a frozen bar. Typed questions show "💭 Thinking…".
+
+---
+
 # Ghostpane v0.1.11
 
 ### New in v0.1.11

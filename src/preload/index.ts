@@ -13,6 +13,8 @@ const api = {
     ipcRenderer.on(CHANNELS.answerError, (_e, v) => cb(v)),
   onConfig: (cb: (c: AppConfig) => void) =>
     ipcRenderer.on(CHANNELS.config, (_e, v) => cb(v)),
+  onStatus: (cb: (s: string) => void) =>
+    ipcRenderer.on(CHANNELS.status, (_e, v) => cb(v)),
   ask: (req: AskRequest) => ipcRenderer.send(CHANNELS.ask, req),
   setClickThrough: (val: boolean) => ipcRenderer.send(CHANNELS.setClickThrough, val),
   setModel: (model: string) => ipcRenderer.send(CHANNELS.setModel, model),
