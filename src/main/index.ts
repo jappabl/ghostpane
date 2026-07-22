@@ -2,7 +2,7 @@ import { app, globalShortcut, ipcMain, screen, shell, BrowserWindow } from 'elec
 import { join } from 'path'
 import { createOverlay, applyFollowBehavior } from './overlay-window'
 import { registerShortcuts } from './register-shortcuts'
-import { captureBehindOverlay } from './screenshot'
+import { captureBehindOverlay, screenPermission } from './screenshot'
 import { ask, resolveClaude } from './claude'
 import { initLogger, getLogPath, getLogDir, log } from './logger'
 import { getSettings, setModel } from './settings'
@@ -21,6 +21,21 @@ function reveal() {
   if (!win) return
   applyFollowBehavior(win)
   win.showInactive()
+}
+
+let screenSettingsOpened = false
+function openScreenRecordingSettings() {
+  if (screenSettingsOpened) return // don't spam-open when the user retries
+  screenSettingsOpened = true
+  log('info', 'opening Screen Recording settings pane')
+  shell.openExternal('x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture').catch(() => {})
+}
+
+function onScreenshotError(err: unknown) {
+  log('error', 'screenshot capture failed', err)
+  if (screenPermission() !== 'granted') openScreenRecordingSettings()
+  reveal()
+  send(CHANNELS.answerError, { message: (err as Error).message })
 }
 
 function pushConfig() {
@@ -65,9 +80,7 @@ async function handleEvent(e: MainEvent) {
         log('info', 'screenshot captured', { path })
         runAsk('', path)
       } catch (err) {
-        log('error', 'screenshot capture failed', err)
-        win.showInactive()
-        send(CHANNELS.answerError, { message: (err as Error).message })
+        onScreenshotError(err)
       }
       break
     case 'toggle-click-through':
@@ -91,6 +104,7 @@ app.whenReady().then(() => {
   initLogger()
   const claude = resolveClaude()
   log(claude.found ? 'info' : 'warn', 'claude resolution', { bin: claude.bin, found: claude.found })
+  log('info', 'screen recording permission', { status: screenPermission() })
 
   win = createOverlay(
     join(__dirname, '../preload/index.js'),
@@ -113,7 +127,7 @@ app.whenReady().then(() => {
       reveal()
       captureBehindOverlay(win)
         .then((path) => runAsk(req.prompt, path))
-        .catch((err) => { log('error', 'screenshot capture failed', err); win?.showInactive(); send(CHANNELS.answerError, { message: (err as Error).message }) })
+        .catch((err) => onScreenshotError(err))
     } else {
       runAsk(req.prompt)
     }

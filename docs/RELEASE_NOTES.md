@@ -1,3 +1,16 @@
+# Ghostpane v0.1.7
+
+### New in v0.1.7
+- **Screenshot (⌘⏎) now tells you what's wrong.** If macOS hasn't granted Screen
+  Recording permission, `⌘⏎` was failing silently with a cryptic error. Now it
+  shows clear steps **and auto-opens** System Settings → Privacy & Security →
+  Screen Recording. Enable **Ghostpane**, then quit & reopen (`⌘⇧Q`). The exact
+  permission status is written to the log (`⌘⇧L`).
+- **Heads-up:** because the app is unsigned, after each update macOS may make you
+  re-enable Screen Recording (it sees the new build as "modified").
+
+---
+
 # Ghostpane v0.1.6
 
 A translucent AI overlay that's **hidden from screen recording & screen

@@ -211,8 +211,14 @@ CLI exit code + stderr.
 You're logged into Claude Code with an API key instead of your subscription. In
 Terminal run `claude`, and re-log in choosing the **subscription** option.
 
-**`⌘⏎` gives an "Empty screenshot / grant Screen Recording" error.**
-Do **Step 6**, then quit and reopen Ghostpane.
+**`⌘⏎` says "Screen Recording permission needed" (or nothing appears).**
+macOS is blocking the screen read. Ghostpane now auto-opens **System Settings →
+Privacy & Security → Screen Recording** — enable **Ghostpane** in that list, then
+**quit (`⌘⇧Q`) and reopen it**. This is required for the screenshot feature; typed
+questions work without it. Note: because the app is unsigned, **after installing an
+update you may have to re-enable it** (macOS sees the new build as modified — toggle
+Ghostpane off and on, or remove it with the `–` button and re-add it). The log
+(`⌘⇧L`) prints the exact permission status.
 
 **The overlay shows up in my screen recording anyway.**
 On macOS, exclusion is reliable for Zoom/Teams/Meet *screen sharing* and
