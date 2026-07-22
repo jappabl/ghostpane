@@ -1,0 +1,1 @@
+// Ghostpane native core module.

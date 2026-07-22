@@ -8,3 +8,5 @@ release/
 verify-out/
 .preview/
 .worktrees/
+.swift-cache/
+native/.build/
