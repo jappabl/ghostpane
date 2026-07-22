@@ -1,3 +1,12 @@
+# Ghostpane v0.1.11
+
+### New in v0.1.11
+- **First ⌘⏎ after launch works immediately.** The screen-capture pipeline is now
+  warmed up at startup, so you no longer hit a cold-start "capture failed" on the
+  very first screenshot.
+
+---
+
 # Ghostpane v0.1.10
 
 ### New in v0.1.10

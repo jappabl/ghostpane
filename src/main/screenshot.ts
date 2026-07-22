@@ -10,6 +10,18 @@ export function screenPermission(): string {
   try { return systemPreferences.getMediaAccessStatus('screen') } catch { return 'unknown' }
 }
 
+// ScreenCaptureKit's first getSources call after launch is often slow/fails cold.
+// Warm it up at startup so the user's first ⌘⏎ doesn't hit that.
+export async function warmUpCapture(): Promise<void> {
+  if (screenPermission() !== 'granted') return
+  try {
+    await desktopCapturer.getSources({ types: ['screen'], thumbnailSize: { width: 1, height: 1 } })
+    log('info', 'capture pipeline warmed up')
+  } catch (e) {
+    log('warn', 'capture warm-up failed (will retry on first use)', { message: (e as Error).message })
+  }
+}
+
 export const PERM_HELP =
   'Screen Recording permission needed. 1) Make sure Ghostpane is in your ' +
   'Applications folder (NOT opened from the disk image). 2) Enable "Ghostpane" ' +

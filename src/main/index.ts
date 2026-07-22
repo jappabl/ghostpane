@@ -2,7 +2,7 @@ import { app, globalShortcut, ipcMain, screen, shell, BrowserWindow } from 'elec
 import { join } from 'path'
 import { createOverlay, applyFollowBehavior } from './overlay-window'
 import { registerShortcuts } from './register-shortcuts'
-import { captureBehindOverlay, screenPermission } from './screenshot'
+import { captureBehindOverlay, screenPermission, warmUpCapture } from './screenshot'
 import { ask, resolveClaude } from './claude'
 import { initLogger, getLogPath, getLogDir, log } from './logger'
 import { getSettings, setModel } from './settings'
@@ -116,6 +116,7 @@ app.whenReady().then(() => {
   const claude = resolveClaude()
   log(claude.found ? 'info' : 'warn', 'claude resolution', { bin: claude.bin, found: claude.found })
   log('info', 'screen recording permission', { status: screenPermission() })
+  warmUpCapture() // prime ScreenCaptureKit so the first ⌘⏎ works immediately
 
   win = createOverlay(
     join(__dirname, '../preload/index.js'),
