@@ -2,6 +2,7 @@ import { spawn as realSpawn } from 'child_process'
 import { existsSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
+import type { ProviderAskOptions } from './provider-types'
 
 // GUI apps launched from Finder/.dmg get a bare PATH (/usr/bin:/bin:...) that
 // omits Homebrew and other common install dirs, so `claude` isn't found. Resolve
@@ -42,17 +43,8 @@ export const SYSTEM_PROMPT = [
 
 export class ClaudeUnavailable extends Error {}
 
-export interface AskOptions {
-  prompt: string
-  imagePath?: string
-  model?: string // '' or undefined = subscription default
-  onChunk: (text: string) => void
-  onDone: () => void
-  onError: (message: string) => void
-  onLog?: (level: 'info' | 'warn' | 'error', msg: string, extra?: unknown) => void
-  spawnFn?: typeof realSpawn
+export interface AskOptions extends ProviderAskOptions {
   claudeBin?: string
-  pathEnv?: string
 }
 
 export function ask(opts: AskOptions): void {
