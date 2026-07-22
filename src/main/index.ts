@@ -7,10 +7,12 @@ import { ask, resolveClaude } from './claude'
 import { initLogger, getLogPath, getLogDir, log } from './logger'
 import { getSettings, setModel } from './settings'
 import { CHANNELS, type MainEvent, type AskRequest, type AppConfig } from '../shared/ipc'
+import { OwnedPaths } from './owned-paths'
 
 let win: BrowserWindow | null = null
 let clickThrough = false
 let busy = false // an ask (capture + Claude) is in flight; ignore new ones
+const activeOwners = new Set<OwnedPaths>()
 
 function send(channel: string, payload?: unknown) {
   win?.webContents.send(channel, payload)
@@ -53,6 +55,14 @@ function pushConfig() {
 
 function runAsk(prompt: string, imagePath?: string) {
   busy = true
+  const owned = new OwnedPaths()
+  activeOwners.add(owned)
+  if (imagePath) owned.add(imagePath)
+  const finish = () => {
+    busy = false
+    activeOwners.delete(owned)
+    void owned.cleanup()
+  }
   reveal() // ensure the answer/error is actually visible
   send(CHANNELS.status, imagePath ? '📸 Reading your screen…' : '💭 Thinking…')
   ask({
@@ -60,8 +70,8 @@ function runAsk(prompt: string, imagePath?: string) {
     imagePath,
     model: getSettings().models[getSettings().provider],
     onChunk: (text) => send(CHANNELS.answerChunk, { text }),
-    onDone: () => { busy = false; send(CHANNELS.answerDone) },
-    onError: (message) => { busy = false; log('error', 'ask error surfaced to UI', { message }); send(CHANNELS.answerError, { message }) },
+    onDone: () => { finish(); send(CHANNELS.answerDone) },
+    onError: (message) => { finish(); log('error', 'ask error surfaced to UI', { message }); send(CHANNELS.answerError, { message }) },
     onLog: (level, msg, extra) => log(level, msg, extra)
   })
 }
@@ -179,4 +189,5 @@ app.whenReady().then(() => {
 })
 
 app.on('will-quit', () => globalShortcut.unregisterAll())
+app.on('will-quit', () => { for (const owner of activeOwners) void owner.cleanup() })
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })
