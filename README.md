@@ -1,236 +1,119 @@
+<div align="center">
+
 # Ghostpane
 
-A translucent AI overlay that floats over your screen, answers questions from
-what it sees, and is **excluded from screen recording and screen sharing** —
-powered by *your own* Claude Pro/Max subscription. No API key, no per-token
-billing.
+**A translucent AI overlay that's invisible to screen recording, powered by your own Claude subscription.**
 
-It's an open-source take on the idea behind Cluely / Interview Coder, built on
-documented OS capabilities.
+[![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
+[![Release](https://img.shields.io/github/v/release/jappabl/ghostpane?color=8b5cf6)](https://github.com/jappabl/ghostpane/releases/latest)
+[![Platform](https://img.shields.io/badge/platform-macOS-lightgrey.svg)](#requirements)
+[![Built with Electron](https://img.shields.io/badge/built%20with-Electron-2f3241.svg)](https://electronjs.org)
 
----
+![Ghostpane floating over a screen-shared Zoom call, answering a coding question](docs/assets/hero.png)
 
-## ⚠️ Intended use — read this first
+</div>
 
-The "invisible to screen capture" behaviour uses the same OS APIs that password
-managers and DRM video players use to keep sensitive windows out of screen
-shares. That capability is **dual-use**.
+Ghostpane floats a small glass bar over everything you do. Ask it a question, or press one key to have it read whatever is on your screen, and Claude answers right there. The window is excluded from screen recording and screen sharing, so it never appears in Zoom, Teams, Meet, QuickTime, or OBS. It talks to Claude through the Pro or Max subscription you already have, so there is no API key and no per-token bill.
 
-Using it to deceive someone who hasn't consented — e.g. secretly reading AI
-answers during a monitored job interview or a proctored exam — is very likely a
-violation of that platform's rules and, depending on context, dishonest or
-against the law. **That's on you.** This project is provided for legitimate uses
-(private notes and teleprompting during your *own* presentations, accessibility,
-research into how screen-capture exclusion works) and with no warranty.
+It's an open take on the idea behind Cluely and Interview Coder, built entirely on documented macOS APIs.
 
----
+## Please use it responsibly
 
-# Install guide (macOS) — read every step
+The screen-capture exclusion is the same OS feature password managers and DRM video players use to keep sensitive windows out of screen shares. There are honest reasons to want it: private notes during your own presentations, teleprompting, accessibility, or just learning how the exclusion works.
 
-> This is written so a first-timer can't get lost. It takes about 5 minutes.
-> You only do steps 1–3 and 5–6 **once**.
+Using it to deceive someone who has not agreed to it, like a monitored interview or a proctored exam, is dishonest, probably against that platform's rules, and entirely on you. Don't be a cheater.
 
-## Step 0 — What you need
+## Features
 
-1. A **Mac** (Apple Silicon or Intel).
-2. A **Claude Pro or Max subscription** (the $20+/mo plan at claude.ai). A free
-   account will not work.
-3. **Claude Code** installed and logged in on this Mac (steps 1–2 below). This is
-   how Ghostpane talks to Claude using your subscription — it never asks you for
-   an API key.
+- Excluded from screen shares and recordings on macOS (Zoom, Teams, Meet, screenshots; best-effort against some ScreenCaptureKit recorders and QuickTime).
+- Answers from a screenshot: one hotkey grabs what's behind the overlay and sends it to Claude.
+- Uses your Claude Pro/Max subscription through the `claude` CLI. No API key.
+- Streams answers token by token and grows the window to fit, then shrinks back.
+- Never steals focus, has no Dock or app-switcher entry, and follows you across Spaces and over full-screen apps.
+- Driven entirely by global hotkeys, so you never move the mouse to a window nobody else can see.
+- Pick your model (Opus, Sonnet, Haiku) from the bar.
 
-## Step 1 — Install Claude Code
+## Requirements
 
-Open the **Terminal** app (press `Cmd+Space`, type "Terminal", hit Return) and
-paste this, then press Return:
+- A Mac (Apple Silicon or Intel).
+- A Claude **Pro or Max** subscription (a free account will not work).
+- [Claude Code](https://docs.claude.com/en/docs/claude-code) installed and logged in. That is how Ghostpane reaches Claude.
+
+## Quick start
+
+**1. Install Claude Code and log in.** In Terminal:
 
 ```bash
-curl -fsSL https://claude.ai/install.sh | bash
+curl -fsSL https://claude.ai/install.sh | bash   # or: brew install --cask claude-code
+claude   # then pick "Claude account with subscription", not an API key
 ```
 
-(Prefer Homebrew? `brew install --cask claude-code` works too. Don't use npm —
-that method is deprecated.)
+**2. Download Ghostpane.** Grab the right file from the [latest release](https://github.com/jappabl/ghostpane/releases/latest):
 
-When it finishes, **quit and reopen Terminal** (so it picks up the new command),
-then verify it worked:
+- Apple Silicon (M1/M2/M3): `Ghostpane-<version>-arm64.dmg`
+- Intel: `Ghostpane-<version>.dmg`
+
+(Not sure which? Apple menu > About This Mac > look at the chip.)
+
+**3. Install it.** Open the `.dmg`, drag Ghostpane into Applications.
+
+**4. Clear the download flag.** macOS calls unsigned downloads "damaged". They aren't. Run this once:
 
 ```bash
-claude --version
+xattr -cr /Applications/Ghostpane.app
 ```
 
-You should see a version number like `2.x.x`. If you instead see
-`command not found`, close Terminal, open it again, and re-run the check. (Full
-install docs: https://docs.claude.com/en/docs/claude-code )
+**5. Grant Screen Recording.** Open Ghostpane, press `⌘⏎`, and it opens System Settings for you. Turn on Ghostpane under Privacy & Security > Screen Recording, then quit (`⌘⇧Q`) and reopen.
 
-## Step 2 — Log in to Claude with your subscription
+That's it. Press `⌘\` to summon the bar and start asking.
 
-In Terminal, run:
+## Keyboard
 
-```bash
-claude
-```
+There is no Dock icon by design. Everything runs through global shortcuts:
 
-The first time, it walks you through logging in — choose **"Claude account with
-subscription"** (NOT an API key), and a browser window opens for you to sign in
-to your Pro/Max account. Approve it, return to Terminal, then type `/exit` and
-press Return to leave.
+| Action | Shortcut |
+| --- | --- |
+| Show / hide the overlay | `⌘ \` |
+| Type a question | `⌘ ⇧ Space`, then Return |
+| Answer what's on screen | `⌘ ⏎` |
+| Scroll a long answer | `⌘ ↑` / `⌘ ↓` |
+| Click-through on/off | `⌘ ⇧ \` |
+| Open the logs | `⌘ ⇧ L` |
+| Quit | `⌘ ⇧ Q` |
 
-✅ **Test that it's really using your subscription** (optional but reassuring):
+Pick a model from the dropdown in the bar. Your choice is saved and passed to `claude --model`.
 
-```bash
-claude -p "say hi"
-```
+## Verify the exclusion yourself
 
-If it replies `hi` (or similar), you're done with setup. If it complains about
-billing or an API key, run `claude` again and make sure you picked the
-**subscription** login, not an API key.
+You do not have to take the "invisible" claim on faith.
 
-## Step 3 — Figure out which Ghostpane file to download
+- **The 30-second test:** show the overlay, start a QuickTime recording or a Zoom "Share Screen", and play it back. The overlay you see is not in the capture.
+- **The rigorous test:** `npm run verify:capture` shows a marker window and captures the screen with content protection off, then on, then off, printing a pass/fail verdict. See [docs/SMOKE.md](docs/SMOKE.md).
 
-You need to know if your Mac is **Apple Silicon** or **Intel**:
+## How it works
 
-1. Click the **Apple menu** () at the top-left of your screen.
-2. Click **About This Mac**.
-3. Look at the chip/processor line:
-   - If it says **"Chip: Apple M1 / M2 / M3 …"** → you have **Apple Silicon**.
-   - If it says **"Processor: Intel …"** → you have **Intel**.
+The magic is one OS capability plus some overlay hygiene:
 
-## Step 4 — Download and install Ghostpane
+- **Screen-capture exclusion.** `BrowserWindow.setContentProtection(true)` sets the window's macOS `NSWindowSharingType` to `none`, which drops it from the capture pipeline that Zoom, Teams, and OBS read.
+- **Panel window.** The overlay is created as a macOS panel (`NSWindowStyleMaskNonactivatingPanel`) so it can float over other apps' full-screen Spaces, like Spotlight, without stealing focus.
+- **Subscription auth.** A small provider spawns `claude -p ... --output-format stream-json` and streams the deltas straight into the UI, drawing from your plan's quota.
 
-1. Go to the **[Releases page](../../releases/latest)**.
-2. Under **Assets**, download the file that matches Step 3:
-   - Apple Silicon → **`Ghostpane-<version>-arm64.dmg`**
-   - Intel → **`Ghostpane-<version>.dmg`** (the one *without* `arm64`)
-3. Open the downloaded `.dmg` (double-click it in Downloads). A window appears
-   showing the **Ghostpane** app icon next to an **Applications** folder.
-4. **Drag the Ghostpane icon onto the Applications folder.** That installs it.
-5. You can now eject the `.dmg` (click the ⏏ next to it in Finder's sidebar).
+The code splits cleanly: the main process owns everything native (the window, hotkeys, capture, and the `claude` provider), a preload script exposes a tiny typed API, and the renderer is a small React app that only draws.
 
-## Step 5 — Open it the first time (get past the security warning)
+<details>
+<summary><b>Troubleshooting</b></summary>
 
-Because this app isn't notarized by Apple, macOS blocks a freshly-downloaded copy.
-You'll likely see **"Ghostpane is damaged and can't be opened."** — it is **not**
-damaged; that's just how macOS treats non-notarized downloads. Clear it with one
-command:
+**"Ghostpane is damaged and can't be opened."** It isn't. macOS shows this for any non-notarized download. Run `xattr -cr /Applications/Ghostpane.app`, then open it.
 
-1. Make sure **Ghostpane** is in your **Applications** folder.
-2. Open **Terminal** and run:
-   ```bash
-   xattr -cr /Applications/Ghostpane.app
-   ```
-   (This removes the "downloaded from the internet" quarantine flag. It does not
-   modify the app.)
-3. Now open Ghostpane from Applications normally.
+**"Claude Code CLI not found."** Ghostpane looks in the usual install locations. If it still can't find `claude`, redo step 1 and check the log with `⌘⇧L`.
 
-You only do this **once per download**. (The real cure for the "damaged" prompt is
-Apple notarization, which needs a paid Apple Developer account.)
+**`⌘⏎` says it needs Screen Recording permission, even after I granted it.** This usually means you are running the app from the disk image or Downloads (macOS "App Translocation"), so the grant does not stick. Move Ghostpane into Applications and open it from there.
 
-## Step 6 — Grant Screen Recording permission
+**Something is off and I want to see why.** Press `⌘⇧L` to open `~/Library/Logs/Ghostpane/ghostpane.log`. It records startup, which `claude` binary was found, every shortcut, each ask, and the exact CLI exit code.
 
-Ghostpane needs Screen Recording permission so it can **screenshot the thing you
-ask about**. (Its *own* window still stays hidden from anyone *else's* screen
-share — this permission is only about Ghostpane reading your screen.)
+**It shows up in my recording anyway.** On macOS the exclusion is reliable for Zoom/Teams/Meet sharing and for screenshots, but best-effort against some ScreenCaptureKit recorders and QuickTime. That is a documented macOS limit.
 
-You'll be prompted the first time you use the screenshot hotkey. To do it now:
-
-1. **System Settings → Privacy & Security → Screen Recording**.
-2. Turn **Ghostpane** on (toggle it blue). If Ghostpane isn't listed yet, click
-   **+**, choose Ghostpane from Applications, and add it.
-3. macOS will ask you to **quit and reopen Ghostpane** — do that.
-
-## Step 7 — Use it
-
-When Ghostpane is running there is **no Dock icon and no window in the app
-switcher** — that's intentional. You control it entirely with keyboard shortcuts:
-
-| What you want | Keys | Notes |
-|---|---|---|
-| **Show / hide** the overlay | `⌘ \` | The backslash key. Start here. |
-| **Type a question** | `⌘ ⇧ Space` | Puts your cursor in the text box. Type, press **Return** to send. |
-| **Answer what's on screen** | `⌘ ⏎` | Takes a screenshot behind the overlay and asks Claude about it. |
-| Scroll a long answer | `⌘ ↑` / `⌘ ↓` | |
-| **Click-through** on/off | `⌘ ⇧ \` | When on, your clicks pass *through* the overlay to the app underneath. |
-| **Open logs** | `⌘ ⇧ L` | Opens `~/Library/Logs/Ghostpane/` so you can see exactly what happened. |
-| **Quit** Ghostpane | `⌘ ⇧ Q` | |
-
-**Pick a model:** the dropdown in the bar chooses Default / Opus / Sonnet /
-Haiku (saved between launches, passed to `claude --model`).
-
-**Your first question, start to finish:**
-
-1. Press **`⌘\`** — a small translucent bar appears near the top of your screen.
-2. Press **`⌘⇧Space`** — your cursor lands in the box.
-3. Type `what is the capital of France` and press **Return**.
-4. The answer streams in and the window **grows to fit it**, then shrinks back on
-   your next question.
-5. To answer something already on your screen (e.g. a question in another app),
-   just press **`⌘⏎`** instead — no typing needed.
-
-That's it. Press `⌘\` to tuck it away whenever you want.
-
----
-
-## What makes it "undetectable"
-
-| Layer | How | Reliability |
-|---|---|---|
-| **Screen-capture exclusion** | Electron `setContentProtection(true)` → macOS `NSWindowSharingNone` | Reliably hidden from Zoom/Teams/Meet screen-share and screenshots; **best-effort** against some ScreenCaptureKit recorders & QuickTime. Windows (not yet shipped) would be airtight; Linux unsupported. |
-| **No focus theft** | Non-activating window shown with `showInactive()` | The app you're actually using stays foreground; the overlay never appears in the app switcher. |
-| **No Dock / taskbar entry** | `skipTaskbar`, macOS `app.dock.hide()` | Nothing to click on, nothing to see. |
-| **Hotkey-driven** | Global shortcuts for every action | You never move the mouse to an invisible window (the classic tell). |
-
-> macOS is the only shipped target today.
-
-### Don't take the exclusion on faith — verify it
-- **30-second manual test:** show the overlay (`⌘\`), start a QuickTime screen
-  recording or a Zoom "Share Screen", and check the playback — the overlay you
-  see isn't in the capture.
-- **Rigorous automated A/B proof:** `npm run verify:capture` shows a marker
-  window and captures the screen with content protection OFF → ON → OFF, printing
-  a PASS/FAIL verdict and saving the images. See [docs/SMOKE.md](docs/SMOKE.md).
-
----
-
-## Troubleshooting
-
-**"I pressed `⌘\` and nothing happened."**
-Make sure Ghostpane is actually running (you opened it from Applications). If
-another app already uses `⌘\`, that shortcut may be taken — quit that app and
-try again. There is deliberately no Dock icon, so "nothing visible" is normal
-until you press `⌘\`.
-
-**The answer area shows "Claude Code CLI not found."**
-Ghostpane looks for `claude` in the usual install locations (Homebrew,
-`/usr/local/bin`, `~/.local/bin`, etc.). If it still can't find it, redo
-**Step 1**, then check the log (**⌘⇧L**) — it prints exactly where it looked.
-
-**Something's wrong and I want to see what.**
-Press **⌘⇧L** to open `~/Library/Logs/Ghostpane/ghostpane.log`. It records
-startup, which `claude` binary was found, every shortcut, each ask, and the exact
-CLI exit code + stderr.
-
-**It says something about billing / API key instead of answering.**
-You're logged into Claude Code with an API key instead of your subscription. In
-Terminal run `claude`, and re-log in choosing the **subscription** option.
-
-**`⌘⏎` says "Screen Recording permission needed" (or nothing appears).**
-macOS is blocking the screen read. Ghostpane now auto-opens **System Settings →
-Privacy & Security → Screen Recording** — enable **Ghostpane** in that list, then
-**quit (`⌘⇧Q`) and reopen it**. This is required for the screenshot feature; typed
-questions work without it. Note: because the app is unsigned, **after installing an
-update you may have to re-enable it** (macOS sees the new build as modified — toggle
-Ghostpane off and on, or remove it with the `–` button and re-add it). The log
-(`⌘⇧L`) prints the exact permission status.
-
-**The overlay shows up in my screen recording anyway.**
-On macOS, exclusion is reliable for Zoom/Teams/Meet *screen sharing* and
-screenshots, but **best-effort** for some ScreenCaptureKit-based recorders and
-QuickTime. This is a documented macOS limitation, not a bug.
-
-**How do I completely close it?**
-Press `⌘⇧Q`. (Or, from Terminal: `pkill -f Ghostpane`.)
-
----
+</details>
 
 ## Build from source
 
@@ -238,23 +121,17 @@ Press `⌘⇧Q`. (Or, from Terminal: `pkill -f Ghostpane`.)
 git clone https://github.com/jappabl/ghostpane
 cd ghostpane
 npm install
-npm run dev        # live-reload dev build
-npm test           # unit tests (Vitest)
-npm run dist       # build .dmg files into release/
+npm run dev     # live-reload dev build
+npm test        # unit tests
+npm run dist    # build signed .dmg files into release/
 ```
 
-## How it works (architecture)
+The design spec and implementation plan live in [docs/superpowers](docs/superpowers).
 
-- **main process** (`src/main`) owns everything OS-native: the stealth window
-  (`overlay-window.ts`), global hotkeys (`register-shortcuts.ts`), screen
-  capture (`screenshot.ts`), the content-fit resize handler (`index.ts`), and the
-  `claude` CLI provider (`claude.ts`, which also holds the overlay system prompt).
-- **preload** (`src/preload`) exposes a minimal, typed `window.ghost` API over a
-  `contextBridge` — the renderer never touches Node or Electron directly.
-- **renderer** (`src/renderer`) is a small React app: a prompt box and a
-  streaming, markdown-rendered answer panel that reports its height so the window
-  fits the content.
+## A note on signing
+
+Ghostpane is signed with a self-signed certificate, not an Apple Developer ID. That is enough for macOS to keep your Screen Recording grant across updates, but it still trips Gatekeeper on first launch (hence the `xattr` step). Proper Developer ID signing and notarization would remove that friction; it needs a paid Apple Developer account.
 
 ## License
 
-MIT — see [LICENSE](LICENSE).
+[MIT](LICENSE)
