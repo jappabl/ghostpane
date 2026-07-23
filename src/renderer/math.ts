@@ -83,8 +83,8 @@ function normalizeSlashDelimiters(value: string): string {
       continue
     }
 
-    const delimiter = next === '(' ? '$' : '$$'
-    output += delimiter + value.slice(index + 2, close) + delimiter
+    const body = value.slice(index + 2, close)
+    output += next === '(' ? `$${body}$` : `$$\n${body}\n$$`
     index = close + closeToken.length
   }
 
@@ -116,7 +116,7 @@ function normalizeBracketBlocks(value: string): string {
     if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
       const body = trimmed.slice(1, -1).trim()
       if (LATEX_COMMAND.test(body)) {
-        output.push(`${indentation}$$${body}$$`)
+        output.push(`${indentation}$$`, `${indentation}${body}`, `${indentation}$$`)
         continue
       }
     }

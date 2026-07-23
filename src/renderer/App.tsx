@@ -1,6 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import Markdown from 'react-markdown'
 import { CameraIcon } from './components/Icons'
+import { MarkdownAnswer } from './components/MarkdownAnswer'
 import type { AppConfig, RecordingState } from '../shared/ipc'
 import { PROVIDERS, modelsForProvider } from '../shared/providers'
 
@@ -116,14 +116,7 @@ export function App() {
                   <div className="error-log">Logs: {config.logPath || '~/Library/Logs/Ghostpane'} · press ⌘⇧L to open</div>
                 </div>
               : answer
-                ? <Markdown components={{
-                    a: ({ href, children }) => (
-                      <a href="#" onClick={(event) => {
-                        event.preventDefault()
-                        if (href) window.ghost.openExternal(href)
-                      }}>{children}</a>
-                    )
-                  }}>{answer}</Markdown>
+                ? <MarkdownAnswer answer={answer} />
                 : <div className="thinking"><span className="d" /><span className="d" /><span className="d" /> {status}</div>}
           </div>
           <div className="panel-foot">

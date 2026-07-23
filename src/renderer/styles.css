@@ -118,6 +118,20 @@ html, body {
 }
 .panel-body pre code { background: none; padding: 0; }
 
+.panel-body .katex { color: inherit; }
+.panel-body .katex-display {
+  margin: 0.7em 0;
+  padding: 0.15em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.panel-body .katex-display > .katex { min-width: max-content; }
+.panel-body .katex-error {
+  color: #ffb4b4;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
+
 .thinking { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); font-size: 13px; }
 .thinking .d { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: pulse 1s infinite; }
 .thinking .d:nth-child(2) { animation-delay: .15s; }
