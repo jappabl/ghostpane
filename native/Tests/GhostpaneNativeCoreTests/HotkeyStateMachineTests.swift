@@ -2,14 +2,14 @@ import XCTest
 @testable import GhostpaneNativeCore
 
 final class HotkeyStateMachineTests: XCTestCase {
-    func testShortPressEmitsTapOnly() {
+    func testShortAudioPressEmitsCleanupActionOnly() {
         var events: [HotkeyAction] = []
         let state = HotkeyStateMachine(threshold: .milliseconds(350)) { events.append($0) }
 
         state.keyDown(at: .zero)
         state.keyUp(at: .milliseconds(120))
 
-        XCTAssertEqual(events, [.pressBegan, .tap])
+        XCTAssertEqual(events, [.pressBegan, .shortPress])
     }
 
     func testHoldIgnoresAutorepeatAndFinishesOnce() {

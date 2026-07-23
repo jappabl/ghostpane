@@ -32,7 +32,7 @@ private final class HelperRuntime: @unchecked Sendable {
             self?.handle(action)
         }
         if monitor.start() { self.monitor = monitor }
-        else { emit(.error("Could not start the global Command+Return monitor.")) }
+        else { emit(.error("Could not start the global Command+Shift+Return monitor.")) }
     }
 
     private func handle(_ action: HotkeyAction) {
@@ -42,17 +42,14 @@ private final class HelperRuntime: @unchecked Sendable {
             if ignoringCurrentPress { return }
             audioReadyForPress = PermissionInspector.current().audioSupported
             if audioReadyForPress { controller.pressBegan() }
-        case .tap:
+        case .shortPress:
             if ignoringCurrentPress {
                 ignoringCurrentPress = false
                 return
             }
             let shouldCancelAudio = audioReadyForPress
             audioReadyForPress = false
-            Task {
-                if shouldCancelAudio { await controller.tap() }
-                emit(.tap())
-            }
+            if shouldCancelAudio { Task { await controller.tap() } }
         case .holdStarted:
             if ignoringCurrentPress { return }
             guard audioReadyForPress else {
@@ -160,14 +157,14 @@ private final class HelperRuntime: @unchecked Sendable {
 
     private func audioUnavailableMessage(_ state: PermissionState) -> String {
         guard state.macOSMajor >= 14 else {
-            return "Held microphone and system-audio capture requires macOS 14 or newer. Tap Command+Return for a screenshot-only ask."
+            return "Held microphone and system-audio capture requires macOS 14 or newer. Use Command+Return for a screenshot-only ask."
         }
         var missing: [String] = []
         if state.accessibility != .granted { missing.append("Accessibility") }
         if state.microphone != .granted { missing.append("Microphone") }
         if state.screen != .granted { missing.append("Screen Recording") }
         if state.speech != .granted { missing.append("Speech Recognition") }
-        return "Grant Ghostpane \(missing.joined(separator: ", ")) permission in Privacy & Security, restart if macOS asks, then hold Command+Return again."
+        return "Grant Ghostpane \(missing.joined(separator: ", ")) permission in Privacy & Security, restart if macOS asks, then hold Command+Shift+Return again."
     }
 
     private func installSignalHandlers() {

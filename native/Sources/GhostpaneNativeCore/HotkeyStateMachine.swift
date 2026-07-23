@@ -2,7 +2,7 @@ import Foundation
 
 public enum HotkeyAction: Equatable, Sendable {
     case pressBegan
-    case tap
+    case shortPress
     case holdStarted
     case holdFinished
     case holdCancelled
@@ -59,7 +59,7 @@ public final class HotkeyStateMachine: @unchecked Sendable {
                 if time - startedAt >= threshold {
                     actions = [.holdStarted, .holdFinished]
                 } else {
-                    actions = [.tap]
+                    actions = [.shortPress]
                 }
             case .holding:
                 actions = [.holdFinished]
