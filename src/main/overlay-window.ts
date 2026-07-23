@@ -3,6 +3,7 @@ import { join } from 'path'
 import { pathToFileURL } from 'url'
 import { shell } from 'electron'
 import { installNavigationGuards } from './navigation'
+import { OVERLAY_SURFACE_OPTIONS } from './overlay-options'
 
 // Makes the overlay follow the user everywhere: above all windows, onto every
 // Space, and over other apps' full-screen windows. skipTransformProcessType is
@@ -25,8 +26,7 @@ export function createOverlay(preloadPath: string, loadUrl: string | null): Brow
     height: 120, // small to start; resizes to fit content (see resize IPC)
     show: false,
     frame: false,
-    transparent: true,
-    hasShadow: false,
+    ...OVERLAY_SURFACE_OPTIONS,
     resizable: false,
     skipTaskbar: true,
     alwaysOnTop: true,
