@@ -1,5 +1,7 @@
 import type { MainEvent } from './ipc'
 
+export const AUDIO_SHORTCUT = 'CommandOrControl+Shift+Return'
+
 export const DEFAULT_SHORTCUTS: Record<MainEvent, string> = {
   'toggle': 'CommandOrControl+\\',
   'ask-screenshot': 'CommandOrControl+Return',

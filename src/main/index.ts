@@ -1,7 +1,7 @@
 import { app, globalShortcut, ipcMain, screen, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { createOverlay, applyFollowBehavior } from './overlay-window'
-import { registerShortcuts } from './register-shortcuts'
+import { registerShortcuts, syncAudioSetupShortcut } from './register-shortcuts'
 import { captureBehindOverlay, screenPermission, warmUpCapture } from './screenshot'
 import { ask as askClaude, resolveClaude } from './claude'
 import { askOpenAI, resolveCodex } from './openai'
@@ -21,7 +21,7 @@ import { isExternalHttpsUrl } from './navigation'
 import { routeAsk } from './provider-router'
 import { NativeHelper, resolveNativeHelperPath, type NativeHelperEvent } from './native-helper'
 import { buildAudioPrompt } from './audio-context'
-import { DEFAULT_SHORTCUTS } from '../shared/shortcuts'
+import { AUDIO_SHORTCUT } from '../shared/shortcuts'
 
 let win: BrowserWindow | null = null
 let clickThrough = false
@@ -112,25 +112,31 @@ async function runAudioAsk(microphoneTranscript: string, systemTranscript: strin
   }
 }
 
-function registerScreenshotFallback() {
-  const accelerator = DEFAULT_SHORTCUTS['ask-screenshot']
-  if (globalShortcut.isRegistered(accelerator)) return
-  const ok = globalShortcut.register(accelerator, () => {
+function syncAudioFallback(canOwnHotkey: boolean) {
+  const ok = syncAudioSetupShortcut(canOwnHotkey, () => {
     if (!audioPermissionRequestSent) {
       audioPermissionRequestSent = true
       nativeHelper?.send('request-permissions')
     }
-    void handleEvent('ask-screenshot')
+    reveal()
+    send(CHANNELS.answerError, {
+      message: 'Held audio uses ⌘⇧⏎ and requires Accessibility, Microphone, Screen Recording, and Speech Recognition access. Grant them in Privacy & Security, reopen Ghostpane if macOS asks, then hold the shortcut again.'
+    })
+  }, {
+    register: (accelerator, callback) => globalShortcut.register(accelerator, callback),
+    unregister: (accelerator) => globalShortcut.unregister(accelerator),
+    isRegistered: (accelerator) => globalShortcut.isRegistered(accelerator)
   })
-  log(ok ? 'info' : 'warn', 'screenshot-only fallback shortcut', { accelerator, ok })
+  log(ok ? 'info' : 'warn', canOwnHotkey ? 'native audio shortcut active' : 'audio setup fallback shortcut', {
+    accelerator: AUDIO_SHORTCUT,
+    ok
+  })
 }
 
 function updateNativePermissions(event: NativeHelperEvent) {
   if (!event.permissions) return
   log('info', 'native helper permissions', event.permissions)
-  const accelerator = DEFAULT_SHORTCUTS['ask-screenshot']
-  if (event.permissions.canOwnHotkey) globalShortcut.unregister(accelerator)
-  else registerScreenshotFallback()
+  syncAudioFallback(event.permissions.canOwnHotkey)
 }
 
 function onNativeHelperEvent(event: NativeHelperEvent) {
@@ -140,7 +146,7 @@ function onNativeHelperEvent(event: NativeHelperEvent) {
       updateNativePermissions(event)
       break
     case 'tap':
-      void handleEvent('ask-screenshot')
+      log('info', 'ignoring legacy native tap event')
       break
     case 'hold-started':
       if (busy) {
@@ -256,7 +262,7 @@ app.whenReady().then(() => {
 
   const results = registerShortcuts(handleEvent, {
     register: (acc, cb) => globalShortcut.register(acc, cb)
-  }, undefined, new Set<MainEvent>(['ask-screenshot']))
+  })
   for (const r of results) {
     if (!r.ok) log('warn', 'shortcut FAILED to register (conflict?)', { event: r.event, accelerator: r.accelerator })
   }
@@ -274,7 +280,7 @@ app.whenReady().then(() => {
           send(CHANNELS.recording, { active: false, elapsedMs: 0 })
           send(CHANNELS.answerError, { message })
         }
-        registerScreenshotFallback()
+        syncAudioFallback(false)
       },
       onLog: log
     }
