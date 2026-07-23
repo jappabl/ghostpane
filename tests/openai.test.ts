@@ -1,6 +1,7 @@
 import { EventEmitter } from 'events'
 import { describe, expect, it } from 'vitest'
 import { askOpenAI, buildCodexArgs } from '../src/main/openai'
+import { withResponseGuidance } from '../src/main/response-guidance'
 
 function fakeSpawn(lines: string[], exitCode = 0, stderrText = '') {
   return () => {
@@ -39,13 +40,20 @@ describe('buildCodexArgs', () => {
     })).toEqual([
       'exec', '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only',
       '--ignore-rules', '--ignore-user-config', '--json',
-      '--image', '/tmp/screen.png', '--', 'Explain this'
+      '--image', '/tmp/screen.png', '--', withResponseGuidance('Explain this')
     ])
   })
 
   it('adds an explicitly selected model', () => {
     expect(buildCodexArgs({ prompt: 'Hi', model: 'gpt-5.6-sol' }))
       .toContain('gpt-5.6-sol')
+  })
+
+  it('places the original request after shared math guidance', () => {
+    const prompt = withResponseGuidance('Explain this')
+    expect(prompt).toContain('Use `$...$` for inline math')
+    expect(prompt).toContain('Use `$$...$$` for display math')
+    expect(prompt).toContain('User request:\nExplain this')
   })
 })
 

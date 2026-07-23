@@ -3,6 +3,7 @@ import { existsSync, mkdtempSync, rmSync } from 'fs'
 import { homedir, tmpdir } from 'os'
 import { join } from 'path'
 import type { ProviderAskOptions, ProviderAvailability } from './provider-types'
+import { withResponseGuidance } from './response-guidance'
 
 const EXTRA_DIRS = [
   '/Applications/ChatGPT.app/Contents/Resources',
@@ -36,7 +37,7 @@ export function buildCodexArgs(input: Pick<OpenAIAskOptions, 'prompt' | 'imagePa
   ]
   if (input.model) args.push('--model', input.model)
   if (input.imagePath) args.push('--image', input.imagePath)
-  args.push('--', input.prompt)
+  args.push('--', withResponseGuidance(input.prompt))
   return args
 }
 

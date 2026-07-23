@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { EventEmitter } from 'events'
-import { ask } from '../src/main/claude'
+import { ask, SYSTEM_PROMPT } from '../src/main/claude'
+import { MATH_FORMATTING_GUIDANCE } from '../src/main/response-guidance'
 
 function fakeSpawn(lines: string[], exitCode = 0) {
   return () => {
@@ -16,6 +17,12 @@ function fakeSpawn(lines: string[], exitCode = 0) {
 }
 
 describe('ask', () => {
+  it('requests canonical inline and display math delimiters', () => {
+    expect(SYSTEM_PROMPT).toContain(MATH_FORMATTING_GUIDANCE)
+    expect(SYSTEM_PROMPT).toContain('Use `$...$` for inline math')
+    expect(SYSTEM_PROMPT).toContain('Use `$$...$$` for display math')
+  })
+
   it('streams assistant text chunks then done', async () => {
     const chunks: string[] = []
     const lines = [
