@@ -1,6 +1,7 @@
 *        { box-sizing: border-box; }
+html, body, #root { background: transparent; }
 html, body {
-  margin: 0; background: transparent; overflow: hidden;
+  margin: 0; overflow: hidden;
   font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", system-ui, sans-serif;
   -webkit-font-smoothing: antialiased;
 }
@@ -9,12 +10,11 @@ html, body {
    pieces stacked with a gap. */
 .root {
   display: flex; flex-direction: column; gap: 8px; padding: 10px 14px 16px;
+  background: transparent;
   /* Nothing is painted behind the text, so every glyph has to carry its own
      contrast: on a white background plain white text disappears. The stroke is
-     painted *behind* the fill (paint-order), which gives an even rim without
-     thickening the letterforms the way stacked shadows do. */
-  /* The stroke sits behind the fill, so only about half its width shows as a
-     rim. It needs to be thick enough to read as a dark edge on a white page. */
+     painted behind the fill (paint-order), so only about half its width shows
+     as a rim, and it has to be thick enough to read against a white page. */
   -webkit-text-stroke: 2.6px rgba(0, 0, 0, 0.82);
   paint-order: stroke fill;
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
@@ -31,6 +31,7 @@ html, body {
 .bar {
   display: flex; align-items: center; gap: 10px;
   height: 46px; padding: 0 8px 0 14px; border-radius: 15px;
+  overflow: hidden;
   -webkit-app-region: drag; /* grab the bar to move the overlay */
 }
 /* interactive controls must stay clickable, not draggable */
