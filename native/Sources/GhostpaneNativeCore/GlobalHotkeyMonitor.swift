@@ -1,8 +1,24 @@
 import ApplicationServices
 import Foundation
 
-public func isCommandReturn(keyCode: Int64, commandPressed: Bool, isRepeat: Bool) -> Bool {
-    keyCode == 36 && commandPressed && !isRepeat
+public func isAudioHotkey(
+    keyCode: Int64,
+    commandPressed: Bool,
+    shiftPressed: Bool,
+    controlPressed: Bool,
+    optionPressed: Bool,
+    isRepeat: Bool
+) -> Bool {
+    keyCode == 36 && commandPressed && shiftPressed &&
+        !controlPressed && !optionPressed && !isRepeat
+}
+
+public func shouldFinishAudioHotkeyForModifierChange(
+    commandPressed: Bool,
+    shiftPressed: Bool,
+    pressActive: Bool
+) -> Bool {
+    pressActive && (!commandPressed || !shiftPressed)
 }
 
 public func shouldFinishCommandReturn(keyCode: Int64, pressActive: Bool) -> Bool {
@@ -79,8 +95,15 @@ public final class GlobalHotkeyMonitor: @unchecked Sendable {
         let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
         let isRepeat = event.getIntegerValueField(.keyboardEventAutorepeat) != 0
         let commandPressed = event.flags.contains(.maskCommand)
+        let shiftPressed = event.flags.contains(.maskShift)
+        let controlPressed = event.flags.contains(.maskControl)
+        let optionPressed = event.flags.contains(.maskAlternate)
 
-        if type == .flagsChanged && pressActive && !commandPressed {
+        if type == .flagsChanged && shouldFinishAudioHotkeyForModifierChange(
+            commandPressed: commandPressed,
+            shiftPressed: shiftPressed,
+            pressActive: pressActive
+        ) {
             finishPress()
             suppressNextReturnKeyUp = true
             return Unmanaged.passUnretained(event)
@@ -92,8 +115,13 @@ public final class GlobalHotkeyMonitor: @unchecked Sendable {
             return nil
         }
 
-        if type == .keyDown && isCommandReturn(
-            keyCode: keyCode, commandPressed: commandPressed, isRepeat: isRepeat
+        if type == .keyDown && isAudioHotkey(
+            keyCode: keyCode,
+            commandPressed: commandPressed,
+            shiftPressed: shiftPressed,
+            controlPressed: controlPressed,
+            optionPressed: optionPressed,
+            isRepeat: isRepeat
         ) {
             pressActive = true
             let now = elapsed()
