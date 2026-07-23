@@ -127,7 +127,8 @@ export function App() {
                 : <div className="thinking"><span className="d" /><span className="d" /><span className="d" /> {status}</div>}
           </div>
           <div className="panel-foot">
-            <span>hold ⌘⏎ audio + screen</span>
+            <span>⌘⏎ screenshot</span>
+            <span>hold ⌘⇧⏎ audio + screen</span>
             <span>⌘\ hide</span>
             <span>⌘↑ ⌘↓ scroll</span>
             <span>⌘⇧\ click-through</span>

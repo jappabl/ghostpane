@@ -15,7 +15,7 @@ extraResources:
 mac:
   category: public.app-category.productivity
   extendInfo:
-    NSMicrophoneUsageDescription: Ghostpane records microphone audio only while Command+Return is held.
+    NSMicrophoneUsageDescription: Ghostpane records microphone audio only while Command+Shift+Return is held.
     NSSpeechRecognitionUsageDescription: Ghostpane transcribes held audio locally to add context to your request.
     NSScreenCaptureUsageDescription: Ghostpane captures your screen and system audio only when you ask it to.
   target:

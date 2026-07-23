@@ -13,7 +13,7 @@
 
 </div>
 
-Ghostpane floats a small glass bar over everything you do. Ask a typed question, tap one shortcut for a screenshot, or hold that shortcut to add microphone and system-audio context. ChatGPT is the default provider and Claude remains one click away. The window is excluded from screen recording and screen sharing, so it does not appear in Zoom, Teams, Meet, QuickTime, or OBS.
+Ghostpane floats a small glass bar over everything you do. Ask a typed question, tap one shortcut for a screenshot, or hold a separate audio shortcut to add microphone and system-audio context. ChatGPT is the default provider and Claude remains one click away. The window is excluded from screen recording and screen sharing, so it does not appear in Zoom, Teams, Meet, QuickTime, or OBS.
 
 It's an open take on the idea behind Cluely and Interview Coder, built entirely on documented macOS APIs.
 
@@ -26,7 +26,7 @@ Using it to deceive someone who has not agreed to it, like a monitored interview
 ## Features
 
 - Excluded from screen shares and recordings on macOS (Zoom, Teams, Meet, screenshots; best-effort against some ScreenCaptureKit recorders and QuickTime).
-- Tap `⌘⏎` for a screenshot answer; hold it to record microphone and system audio, transcribe both locally, and answer using a fresh screenshot.
+- Tap `⌘⏎` for a screenshot answer. Hold `⌘⇧⏎` to record microphone and system audio, transcribe both locally, and answer using a fresh screenshot.
 - Uses your ChatGPT subscription through the Codex CLI by default. Claude Code remains an optional provider. No API key.
 - Audio recording is strictly press-and-hold. Releasing the keys stops capture; raw temporary audio is deleted after local transcription.
 - Streams answers token by token and grows the window to fit, then shrinks back.
@@ -65,7 +65,7 @@ If you already have the ChatGPT macOS app, Ghostpane can use its bundled Codex e
 xattr -cr /Applications/Ghostpane.app
 ```
 
-**5. Grant permissions.** Open Ghostpane and press `⌘⏎` once. For screenshots, enable Screen Recording. For held audio, also enable Accessibility, Microphone, and Speech Recognition. Quit (`⌘⇧Q`) and reopen after changing them. Ghostpane records only while `⌘⏎` remains held.
+**5. Grant permissions.** Open Ghostpane and press `⌘⏎` once. For screenshots, enable Screen Recording. For held audio, press `⌘⇧⏎`, then enable Accessibility, Microphone, and Speech Recognition. Quit (`⌘⇧Q`) and reopen after changing them. Ghostpane records only while `⌘⇧⏎` remains held.
 
 That's it. Press `⌘\` to summon the bar and start asking.
 
@@ -78,7 +78,7 @@ There is no Dock icon by design. Everything runs through global shortcuts:
 | Show / hide the overlay | `⌘ \` |
 | Type a question | `⌘ ⇧ Space`, then Return |
 | Answer what's on screen | Tap `⌘ ⏎` |
-| Add microphone + system audio | Hold `⌘ ⏎`, release to submit |
+| Add microphone + system audio | Hold `⌘ ⇧ ⏎`, release to submit |
 | Scroll a long answer | `⌘ ↑` / `⌘ ↓` |
 | Click-through on/off | `⌘ ⇧ \` |
 | Open the logs | `⌘ ⇧ L` |
@@ -111,7 +111,7 @@ The code splits cleanly: the Electron main process owns the window, provider rou
 
 **"Codex CLI not found" or "ChatGPT is not signed in."** Run `codex login`, then reopen Ghostpane. You can also switch to Claude from the provider dropdown.
 
-**Holding `⌘⏎` does not record.** Audio needs macOS 14+, plus Accessibility, Microphone, Screen Recording, and Speech Recognition access. Enable Ghostpane in all four Privacy & Security panes, then quit and reopen it.
+**Holding `⌘⇧⏎` does not record.** Audio needs macOS 14+, plus Accessibility, Microphone, Screen Recording, and Speech Recognition access. Enable Ghostpane in all four Privacy & Security panes, then quit and reopen it. A short tap intentionally does nothing; audio requires a 350 ms hold.
 
 **`⌘⏎` says it needs Screen Recording permission, even after I granted it.** This usually means you are running the app from the disk image or Downloads (macOS "App Translocation"), so the grant does not stick. Move Ghostpane into Applications and open it from there.
 

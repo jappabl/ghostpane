@@ -1,3 +1,17 @@
+# Ghostpane v0.2.1
+
+### New in v0.2.1
+- **Separate screenshot and audio shortcuts.** `⌘⏎` is always screenshot-only.
+  Hold `⌘⇧⏎` for microphone + system-audio context; a short audio-key tap
+  intentionally submits nothing.
+- **Readable math answers.** Standard inline, display, and multiline LaTeX now
+  renders locally with KaTeX while code, currency, links, and malformed input
+  stay safe and readable.
+- **Same simple install.** GitHub downloads remain ordinary `.dmg` files for
+  Apple Silicon and Intel Macs.
+
+---
+
 # Ghostpane v0.2.0
 
 ### New in v0.2.0
