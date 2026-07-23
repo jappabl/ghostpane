@@ -13,6 +13,15 @@ function shouldRequireSigning(env) {
 
 exports.shouldRequireSigning = shouldRequireSigning
 
+function codesignArgs(target, deep = false) {
+  return [
+    '--force', ...(deep ? ['--deep'] : []), '--timestamp=none',
+    '--sign', IDENTITY, target
+  ]
+}
+
+exports.codesignArgs = codesignArgs
+
 exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'darwin') return
   const app = path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`)
@@ -35,11 +44,7 @@ exports.default = async function afterPack(context) {
   }
 
   console.log(`afterPack: signing ${app} with "${IDENTITY}"`)
-  execFileSync('codesign', [
-    '--force', '--options', 'runtime', '--timestamp=none', '--sign', IDENTITY, helper
-  ], { stdio: 'inherit' })
-  execFileSync('codesign', [
-    '--force', '--deep', '--options', 'runtime', '--timestamp=none', '--sign', IDENTITY, app
-  ], { stdio: 'inherit' })
+  execFileSync('codesign', codesignArgs(helper), { stdio: 'inherit' })
+  execFileSync('codesign', codesignArgs(app, true), { stdio: 'inherit' })
   execFileSync('codesign', ['--verify', '--deep', '--strict', app], { stdio: 'inherit' })
 }
