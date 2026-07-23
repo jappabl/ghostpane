@@ -1,16 +1,35 @@
 import { app, globalShortcut, ipcMain, screen, shell, BrowserWindow } from 'electron'
 import { join } from 'path'
 import { createOverlay, applyFollowBehavior } from './overlay-window'
-import { registerShortcuts } from './register-shortcuts'
+import { registerShortcuts, syncAudioSetupShortcut } from './register-shortcuts'
 import { captureBehindOverlay, screenPermission, warmUpCapture } from './screenshot'
-import { ask, resolveClaude } from './claude'
+import { ask as askClaude, resolveClaude } from './claude'
+import { askOpenAI, resolveCodex } from './openai'
 import { initLogger, getLogPath, getLogDir, log } from './logger'
-import { getSettings, setModel } from './settings'
-import { CHANNELS, type MainEvent, type AskRequest, type AppConfig } from '../shared/ipc'
+import { getSettings, setModel, setProvider } from './settings'
+import { CHANNELS, type MainEvent, type AppConfig } from '../shared/ipc'
+import { OwnedPaths } from './owned-paths'
+import {
+  isTrustedSender,
+  parseAskRequest,
+  parseBoolean,
+  parseModel,
+  parseProvider,
+  parseResize
+} from './ipc-validation'
+import { isExternalHttpsUrl } from './navigation'
+import { routeAsk } from './provider-router'
+import { NativeHelper, resolveNativeHelperPath, type NativeHelperEvent } from './native-helper'
+import { buildAudioPrompt } from './audio-context'
+import { AUDIO_SHORTCUT } from '../shared/shortcuts'
 
 let win: BrowserWindow | null = null
 let clickThrough = false
 let busy = false // an ask (capture + Claude) is in flight; ignore new ones
+let audioActive = false
+let audioPermissionRequestSent = false
+let nativeHelper: NativeHelper | null = null
+const activeOwners = new Set<OwnedPaths>()
 
 function send(channel: string, payload?: unknown) {
   win?.webContents.send(channel, payload)
@@ -42,23 +61,135 @@ function onScreenshotError(err: unknown) {
 }
 
 function pushConfig() {
-  const cfg: AppConfig = { model: getSettings().model, logPath: getLogPath() }
+  const settings = getSettings()
+  const cfg: AppConfig = {
+    provider: settings.provider,
+    model: settings.models[settings.provider],
+    logPath: getLogPath()
+  }
   send(CHANNELS.config, cfg)
 }
 
 function runAsk(prompt: string, imagePath?: string) {
   busy = true
+  const settings = getSettings()
+  const owned = new OwnedPaths(undefined, (path, error) => {
+    log('warn', 'temporary screenshot cleanup failed', { path, error })
+  })
+  activeOwners.add(owned)
+  if (imagePath) owned.add(imagePath)
+  const finish = () => {
+    busy = false
+    activeOwners.delete(owned)
+    void owned.cleanup()
+  }
   reveal() // ensure the answer/error is actually visible
-  send(CHANNELS.status, imagePath ? '📸 Reading your screen…' : '💭 Thinking…')
-  ask({
+  const providerLabel = settings.provider === 'openai' ? 'ChatGPT' : 'Claude'
+  send(CHANNELS.status, imagePath
+    ? `📸 Asking ${providerLabel} about your screen…`
+    : `💭 Asking ${providerLabel}…`)
+  routeAsk(settings.provider, { openai: askOpenAI, claude: askClaude }, {
     prompt: prompt || 'Read the question or content on screen and answer concisely.',
     imagePath,
-    model: getSettings().model,
+    model: settings.models[settings.provider],
     onChunk: (text) => send(CHANNELS.answerChunk, { text }),
-    onDone: () => { busy = false; send(CHANNELS.answerDone) },
-    onError: (message) => { busy = false; log('error', 'ask error surfaced to UI', { message }); send(CHANNELS.answerError, { message }) },
+    onDone: () => { finish(); send(CHANNELS.answerDone) },
+    onError: (message) => { finish(); log('error', 'ask error surfaced to UI', { message }); send(CHANNELS.answerError, { message }) },
     onLog: (level, msg, extra) => log(level, msg, extra)
   })
+}
+
+async function runAudioAsk(microphoneTranscript: string, systemTranscript: string) {
+  if (!win) return
+  reveal()
+  send(CHANNELS.status, '📸 Capturing current screen context…')
+  try {
+    const path = await captureBehindOverlay(win)
+    log('info', 'audio-context screenshot captured', { path })
+    runAsk(buildAudioPrompt('', microphoneTranscript, systemTranscript), path)
+  } catch (err) {
+    onScreenshotError(err)
+  }
+}
+
+function syncAudioFallback(canOwnHotkey: boolean) {
+  const ok = syncAudioSetupShortcut(canOwnHotkey, () => {
+    if (!audioPermissionRequestSent) {
+      audioPermissionRequestSent = true
+      nativeHelper?.send('request-permissions')
+    }
+    reveal()
+    send(CHANNELS.answerError, {
+      message: 'Held audio uses ⌘⇧⏎ and requires Accessibility, Microphone, Screen Recording, and Speech Recognition access. Grant them in Privacy & Security, reopen Ghostpane if macOS asks, then hold the shortcut again.'
+    })
+  }, {
+    register: (accelerator, callback) => globalShortcut.register(accelerator, callback),
+    unregister: (accelerator) => globalShortcut.unregister(accelerator),
+    isRegistered: (accelerator) => globalShortcut.isRegistered(accelerator)
+  })
+  log(ok ? 'info' : 'warn', canOwnHotkey ? 'native audio shortcut active' : 'audio setup fallback shortcut', {
+    accelerator: AUDIO_SHORTCUT,
+    ok
+  })
+}
+
+function updateNativePermissions(event: NativeHelperEvent) {
+  if (!event.permissions) return
+  log('info', 'native helper permissions', event.permissions)
+  syncAudioFallback(event.permissions.canOwnHotkey)
+}
+
+function onNativeHelperEvent(event: NativeHelperEvent) {
+  switch (event.type) {
+    case 'ready':
+    case 'permission-state':
+      updateNativePermissions(event)
+      break
+    case 'tap':
+      log('info', 'ignoring legacy native tap event')
+      break
+    case 'hold-started':
+      if (busy) {
+        nativeHelper?.send('cancel')
+        break
+      }
+      busy = true
+      audioActive = true
+      reveal()
+      send(CHANNELS.recording, { active: true, elapsedMs: 0 })
+      send(CHANNELS.status, '🎙️ Recording microphone + system audio…')
+      break
+    case 'hold-progress':
+      if (audioActive) send(CHANNELS.recording, { active: true, elapsedMs: event.elapsedMs ?? 0 })
+      break
+    case 'transcribing':
+      if (!audioActive) break
+      send(CHANNELS.recording, { active: false, elapsedMs: 0 })
+      send(CHANNELS.status, '🎙️ Transcribing audio locally…')
+      break
+    case 'hold-finished':
+      if (!audioActive) break
+      audioActive = false
+      send(CHANNELS.recording, { active: false, elapsedMs: 0 })
+      void runAudioAsk(event.microphoneTranscript ?? '', event.systemTranscript ?? '')
+      break
+    case 'hold-cancelled':
+      if (!audioActive) break
+      audioActive = false
+      busy = false
+      send(CHANNELS.recording, { active: false, elapsedMs: 0 })
+      send(CHANNELS.status, '')
+      break
+    case 'error':
+      if (audioActive) {
+        audioActive = false
+        busy = false
+        send(CHANNELS.recording, { active: false, elapsedMs: 0 })
+      }
+      reveal()
+      send(CHANNELS.answerError, { message: event.message ?? 'The audio helper failed.' })
+      break
+  }
 }
 
 async function handleEvent(e: MainEvent) {
@@ -117,6 +248,8 @@ app.whenReady().then(() => {
   if (translocated) log('warn', 'APP IS TRANSLOCATED — move Ghostpane to /Applications; permissions will not stick until you do')
   const claude = resolveClaude()
   log(claude.found ? 'info' : 'warn', 'claude resolution', { bin: claude.bin, found: claude.found })
+  const codex = resolveCodex()
+  log(codex.found ? 'info' : 'warn', 'codex resolution', { bin: codex.bin, found: codex.found })
   log('info', 'screen recording permission', { status: screenPermission() })
   warmUpCapture() // prime ScreenCaptureKit so the first ⌘⏎ works immediately
 
@@ -135,7 +268,29 @@ app.whenReady().then(() => {
   }
   log('info', 'shortcuts registered', { ok: results.filter((r) => r.ok).length, total: results.length })
 
-  ipcMain.on(CHANNELS.ask, (_e, req: AskRequest) => {
+  nativeHelper = new NativeHelper(
+    resolveNativeHelperPath(app.isPackaged, process.resourcesPath, app.getAppPath()),
+    {
+      onEvent: onNativeHelperEvent,
+      onUnavailable: (message) => {
+        log('warn', message)
+        if (audioActive) {
+          audioActive = false
+          busy = false
+          send(CHANNELS.recording, { active: false, elapsedMs: 0 })
+          send(CHANNELS.answerError, { message })
+        }
+        syncAudioFallback(false)
+      },
+      onLog: log
+    }
+  )
+  nativeHelper.start()
+
+  ipcMain.on(CHANNELS.ask, (event, value: unknown) => {
+    if (!win || !isTrustedSender(event, win)) return
+    const req = parseAskRequest(value)
+    if (!req) { log('warn', 'rejected invalid ask IPC'); return }
     if (busy) { log('info', 'ignoring UI ask — an ask is already in flight'); return }
     log('info', 'ask from UI', { withScreenshot: req.withScreenshot, promptLen: req.prompt.length })
     if (req.withScreenshot && win) {
@@ -149,18 +304,41 @@ app.whenReady().then(() => {
     }
   })
 
-  ipcMain.on(CHANNELS.setClickThrough, (_e, val: boolean) => {
+  ipcMain.on(CHANNELS.setClickThrough, (event, value: unknown) => {
+    if (!win || !isTrustedSender(event, win)) return
+    const val = parseBoolean(value)
+    if (val === null) return
     clickThrough = val
     win?.setIgnoreMouseEvents(val, { forward: true })
   })
 
-  ipcMain.on(CHANNELS.setModel, (_e, model: string) => {
-    setModel(model)
+  ipcMain.on(CHANNELS.setProvider, (event, value: unknown) => {
+    if (!win || !isTrustedSender(event, win)) return
+    const provider = parseProvider(value)
+    if (!provider) return
+    setProvider(provider)
     pushConfig()
   })
 
+  ipcMain.on(CHANNELS.setModel, (event, value: unknown) => {
+    if (!win || !isTrustedSender(event, win)) return
+    const provider = getSettings().provider
+    const model = parseModel(provider, value)
+    if (model === null) return
+    setModel(model, provider)
+    pushConfig()
+  })
+
+  ipcMain.on(CHANNELS.openExternal, (event, value: unknown) => {
+    if (!win || !isTrustedSender(event, win)) return
+    if (typeof value === 'string' && isExternalHttpsUrl(value)) void shell.openExternal(value)
+  })
+
   const MIN_H = 64
-  ipcMain.on(CHANNELS.resize, (_e, height: number) => {
+  ipcMain.on(CHANNELS.resize, (event, value: unknown) => {
+    if (!win || !isTrustedSender(event, win)) return
+    const height = parseResize(value)
+    if (height === null) return
     if (!win) return
     const b = win.getBounds()
     const wa = screen.getDisplayMatching(b).workArea
@@ -173,5 +351,7 @@ app.whenReady().then(() => {
   })
 })
 
+app.on('will-quit', () => nativeHelper?.stop())
 app.on('will-quit', () => globalShortcut.unregisterAll())
+app.on('will-quit', () => { for (const owner of activeOwners) void owner.cleanup() })
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })

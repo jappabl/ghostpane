@@ -2,28 +2,46 @@
 // designated requirement (cert-based) stays constant across rebuilds — macOS then
 // keeps the Screen Recording grant instead of wiping it every update. electron-
 // builder skips self-signed (untrusted) identities, so we sign here directly.
-const { execSync } = require('child_process')
+const { execFileSync } = require('child_process')
 const path = require('path')
 
 const IDENTITY = 'Ghostpane Local Signing'
 
+function shouldRequireSigning(env) {
+  return env.CI === 'true' || env.GHOSTPANE_REQUIRE_SIGNING === '1'
+}
+
+exports.shouldRequireSigning = shouldRequireSigning
+
+function codesignArgs(target, deep = false) {
+  return [
+    '--force', ...(deep ? ['--deep'] : []), '--timestamp=none',
+    '--sign', IDENTITY, target
+  ]
+}
+
+exports.codesignArgs = codesignArgs
+
+function signApp(app, helper, runner = execFileSync) {
+  runner('codesign', codesignArgs(helper), { stdio: 'inherit' })
+  runner('codesign', codesignArgs(app, true), { stdio: 'inherit' })
+  runner('codesign', ['--verify', '--deep', '--strict', app], { stdio: 'inherit' })
+}
+
+exports.signApp = signApp
+
 exports.default = async function afterPack(context) {
   if (context.electronPlatformName !== 'darwin') return
   const app = path.join(context.appOutDir, `${context.packager.appInfo.productFilename}.app`)
-
-  // Is the identity present? If not (e.g. building on CI), skip quietly.
-  try {
-    const ids = execSync('security find-identity -p codesigning', { encoding: 'utf8' })
-    if (!ids.includes(IDENTITY)) {
-      console.log(`afterPack: identity "${IDENTITY}" not found — leaving app unsigned`)
-      return
-    }
-  } catch {
-    return
-  }
+  const helper = path.join(app, 'Contents', 'Resources', 'native', 'ghostpane-helper')
+  const required = shouldRequireSigning(process.env)
 
   console.log(`afterPack: signing ${app} with "${IDENTITY}"`)
-  execSync(`codesign --force --deep --sign "${IDENTITY}" ${JSON.stringify(app)}`, { stdio: 'inherit' })
-  const dr = execSync(`codesign -dr - ${JSON.stringify(app)} 2>&1`, { encoding: 'utf8' })
-  console.log('afterPack: designated requirement ->', dr.trim())
+  try {
+    signApp(app, helper)
+  } catch (error) {
+    const message = `afterPack: signing with "${IDENTITY}" failed: ${error.message}`
+    if (required) throw new Error(message)
+    console.log(`${message} — leaving local development app unsigned`)
+  }
 }

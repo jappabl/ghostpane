@@ -1,32 +1,101 @@
 name: release
+
 on:
   push:
     tags: ['v*']
+
+permissions:
+  contents: write
+
 jobs:
-  mac:
+  validate:
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
-        with: { node-version: 20 }
+        with:
+          node-version: 20
+          cache: npm
       - run: npm ci
       - run: npm test
-      - run: npm run dist
+      - run: npm run typecheck
+      - run: npm run native:test
+
+  package:
+    needs: validate
+    runs-on: macos-latest
+    env:
+      GHOSTPANE_REQUIRE_SIGNING: '1'
+      SIGNING_KEYCHAIN: ${{ runner.temp }}/ghostpane-signing.keychain-db
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+      - run: npm ci
+
+      - name: Import signing identity
+        shell: bash
+        env:
+          CERTIFICATE_BASE64: ${{ secrets.GHOSTPANE_CERT_P12_BASE64 }}
+          CERTIFICATE_PASSWORD: ${{ secrets.GHOSTPANE_CERT_PASSWORD }}
+        run: |
+          set -euo pipefail
+          test -n "$CERTIFICATE_BASE64" || { echo "GHOSTPANE_CERT_P12_BASE64 is missing" >&2; exit 1; }
+          test -n "$CERTIFICATE_PASSWORD" || { echo "GHOSTPANE_CERT_PASSWORD is missing" >&2; exit 1; }
+          P12="$RUNNER_TEMP/ghostpane-signing.p12"
+          CERT="$RUNNER_TEMP/ghostpane-signing.pem"
+          printf '%s' "$CERTIFICATE_BASE64" | base64 -D > "$P12"
+          KEYCHAIN_PASSWORD="$(openssl rand -hex 24)"
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$SIGNING_KEYCHAIN"
+          security set-keychain-settings -lut 21600 "$SIGNING_KEYCHAIN"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$SIGNING_KEYCHAIN"
+          security import "$P12" -k "$SIGNING_KEYCHAIN" -P "$CERTIFICATE_PASSWORD" -T /usr/bin/codesign -T /usr/bin/security
+          openssl pkcs12 -in "$P12" -clcerts -nokeys -passin env:CERTIFICATE_PASSWORD -out "$CERT"
+          security add-trusted-cert -r trustRoot -k "$SIGNING_KEYCHAIN" "$CERT"
+          security set-key-partition-list -S apple-tool:,apple: -s -k "$KEYCHAIN_PASSWORD" "$SIGNING_KEYCHAIN"
+          security list-keychains -d user -s "$SIGNING_KEYCHAIN"
+          security find-identity -v -p codesigning "$SIGNING_KEYCHAIN" | grep -F '"Ghostpane Local Signing"'
+
+      - name: Build signed DMGs
+        run: npm run dist
+
+      - name: Verify release artifacts
+        shell: bash
+        run: |
+          set -euo pipefail
+          ARM_APP="release/mac-arm64/Ghostpane.app"
+          X64_APP="release/mac/Ghostpane.app"
+          [[ -d "$X64_APP" ]] || X64_APP="release/mac-x64/Ghostpane.app"
+          ARM_DMG="$(find release -maxdepth 1 -type f -name '*-arm64.dmg' -print -quit)"
+          X64_DMG="$(find release -maxdepth 1 -type f -name '*.dmg' ! -name '*-arm64.dmg' -print -quit)"
+          scripts/verify-release.sh "$ARM_APP" "$ARM_DMG" arm64
+          scripts/verify-release.sh "$X64_APP" "$X64_DMG" x64
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: ghostpane-dmgs
+          path: release/*.dmg
+          if-no-files-found: error
+
+      - name: Delete temporary signing keychain
+        if: always()
+        shell: bash
+        run: |
+          if [[ -f "$SIGNING_KEYCHAIN" ]]; then
+            security delete-keychain "$SIGNING_KEYCHAIN"
+          fi
+
+  release:
+    needs: package
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: ghostpane-dmgs
+          path: release
       - uses: softprops/action-gh-release@v2
         with:
           files: release/*.dmg
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  # windows job intentionally deferred; enable when Windows is a target:
-  # win:
-  #   runs-on: windows-latest
-  #   steps:
-  #     - uses: actions/checkout@v4
-  #     - uses: actions/setup-node@v4
-  #       with: { node-version: 20 }
-  #     - run: npm ci
-  #     - run: npm test
-  #     - run: npx electron-vite build && npx electron-builder --win
-  #     - uses: softprops/action-gh-release@v2
-  #       with: { files: release/*.exe }
-  #       env: { GITHUB_TOKEN: "${{ secrets.GITHUB_TOKEN }}" }
+          fail_on_unmatched_files: true

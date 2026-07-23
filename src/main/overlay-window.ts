@@ -1,5 +1,8 @@
 import { BrowserWindow, app, screen } from 'electron'
 import { join } from 'path'
+import { pathToFileURL } from 'url'
+import { shell } from 'electron'
+import { installNavigationGuards } from './navigation'
 
 // Makes the overlay follow the user everywhere: above all windows, onto every
 // Space, and over other apps' full-screen windows. skipTransformProcessType is
@@ -52,8 +55,12 @@ export function createOverlay(preloadPath: string, loadUrl: string | null): Brow
   const wa = screen.getPrimaryDisplay().workArea
   win.setPosition(Math.round(wa.x + (wa.width - 520) / 2), wa.y + 48)
 
+  const rendererFile = join(__dirname, '../renderer/index.html')
+  const trustedRendererUrl = loadUrl ?? pathToFileURL(rendererFile).toString()
+  installNavigationGuards(win, trustedRendererUrl, (url) => shell.openExternal(url))
+
   if (loadUrl) win.loadURL(loadUrl)
-  else win.loadFile(join(__dirname, '../renderer/index.html'))
+  else win.loadFile(rendererFile)
 
   win.once('ready-to-show', () => win.showInactive())
   return win

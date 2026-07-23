@@ -2,6 +2,8 @@ import { spawn as realSpawn } from 'child_process'
 import { existsSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
+import type { ProviderAskOptions } from './provider-types'
+import { MATH_FORMATTING_GUIDANCE } from './response-guidance'
 
 // GUI apps launched from Finder/.dmg get a bare PATH (/usr/bin:/bin:...) that
 // omits Homebrew and other common install dirs, so `claude` isn't found. Resolve
@@ -34,6 +36,7 @@ export const SYSTEM_PROMPT = [
   '- Be concise. Short sentences and tight bullet lists beat paragraphs.',
   '- The window is narrow (~500px). Keep lines short; never draw wide ASCII tables.',
   '- Use Markdown: fenced code blocks with a language tag for any code.',
+  MATH_FORMATTING_GUIDANCE,
   '- For a coding/interview problem on screen: give the complete, correct solution',
   '  first (in a code block), then one line on approach and time/space complexity.',
   '- If the screenshot is ambiguous, state your single best interpretation and answer it;',
@@ -42,17 +45,8 @@ export const SYSTEM_PROMPT = [
 
 export class ClaudeUnavailable extends Error {}
 
-export interface AskOptions {
-  prompt: string
-  imagePath?: string
-  model?: string // '' or undefined = subscription default
-  onChunk: (text: string) => void
-  onDone: () => void
-  onError: (message: string) => void
-  onLog?: (level: 'info' | 'warn' | 'error', msg: string, extra?: unknown) => void
-  spawnFn?: typeof realSpawn
+export interface AskOptions extends ProviderAskOptions {
   claudeBin?: string
-  pathEnv?: string
 }
 
 export function ask(opts: AskOptions): void {

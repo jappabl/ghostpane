@@ -26,7 +26,7 @@ html, body {
   -webkit-app-region: drag; /* grab the bar to move the overlay */
 }
 /* interactive controls must stay clickable, not draggable */
-.ask, .iconbtn, .model { -webkit-app-region: no-drag; }
+.ask, .iconbtn, .model, .provider { -webkit-app-region: no-drag; }
 
 /* brand / status dot */
 .dot {
@@ -35,6 +35,10 @@ html, body {
   box-shadow: 0 0 8px rgba(120, 130, 255, 0.6);
 }
 .dot.live { animation: pulse 1.1s ease-in-out infinite; }
+.dot.recording {
+  background: #ff5d63;
+  box-shadow: 0 0 10px rgba(255, 76, 84, 0.8);
+}
 @keyframes pulse { 0%,100% { opacity: 1; transform: scale(1); }
                    50% { opacity: .45; transform: scale(.8); } }
 
@@ -46,6 +50,9 @@ html, body {
 .ask::placeholder { color: rgba(255, 255, 255, 0.42); }
 
 .bar-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
+.recording-time {
+  color: #ff9a9e; font-size: 11px; font-variant-numeric: tabular-nums;
+}
 
 .iconbtn {
   display: flex; align-items: center; justify-content: center;
@@ -66,14 +73,15 @@ html, body {
 .sep { width: 1px; height: 20px; background: rgba(255, 255, 255, 0.12); }
 
 /* model picker */
-.model {
+.model, .provider {
   appearance: none; -webkit-appearance: none;
   background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.09);
   color: rgba(255, 255, 255, 0.78); border-radius: 8px; padding: 5px 8px;
   font-size: 12px; cursor: pointer; outline: none;
 }
-.model:hover { background: rgba(255, 255, 255, 0.12); }
-.model option { color: #111; }
+.model:hover, .provider:hover { background: rgba(255, 255, 255, 0.12); }
+.model option, .provider option { color: #111; }
+.provider { max-width: 86px; }
 
 /* ---- answer panel ---- */
 .panel {
@@ -109,6 +117,20 @@ html, body {
   overflow-x: auto; margin: 8px 0; border: 1px solid rgba(255, 255, 255, 0.06);
 }
 .panel-body pre code { background: none; padding: 0; }
+
+.panel-body .katex { color: inherit; }
+.panel-body .katex-display {
+  margin: 0.7em 0;
+  padding: 0.15em 0;
+  overflow-x: auto;
+  overflow-y: hidden;
+}
+.panel-body .katex-display > .katex { min-width: max-content; }
+.panel-body .katex-error {
+  color: #ffb4b4;
+  overflow-wrap: anywhere;
+  white-space: normal;
+}
 
 .thinking { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); font-size: 13px; }
 .thinking .d { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: pulse 1s infinite; }

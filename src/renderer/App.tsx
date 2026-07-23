@@ -1,7 +1,8 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import Markdown from 'react-markdown'
 import { CameraIcon } from './components/Icons'
-import { MODELS, type AppConfig } from '../shared/ipc'
+import { MarkdownAnswer } from './components/MarkdownAnswer'
+import type { AppConfig, RecordingState } from '../shared/ipc'
+import { PROVIDERS, modelsForProvider } from '../shared/providers'
 
 // Cap the overlay at ~85% of the screen; taller answers scroll inside.
 const MAX_H = Math.floor((window.screen?.availHeight ?? 900) * 0.85)
@@ -10,8 +11,9 @@ export function App() {
   const [prompt, setPrompt] = useState('')
   const [answer, setAnswer] = useState('')
   const [status, setStatus] = useState('') // main-driven: '' | '📸 Taking screenshot…' | '💭 Thinking…' …
+  const [recording, setRecording] = useState<RecordingState>({ active: false, elapsedMs: 0 })
   const [error, setError] = useState('')
-  const [config, setConfig] = useState<AppConfig>({ model: '', logPath: '' })
+  const [config, setConfig] = useState<AppConfig>({ provider: 'openai', model: '', logPath: '' })
   const inputRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
@@ -37,6 +39,7 @@ export function App() {
     window.ghost.onAnswerError((e) => { setStatus(''); setError(e.message) })
     // Main drives status through each phase; a new status starts a fresh answer.
     window.ghost.onStatus((s) => { if (s) { setAnswer(''); setError(''); setStatus(s) } else setStatus('') })
+    window.ghost.onRecording(setRecording)
     window.ghost.onConfig((c) => setConfig(c))
     window.ghost.onMainEvent((e) => {
       if (e === 'focus-input') inputRef.current?.focus()
@@ -51,7 +54,7 @@ export function App() {
     if (el) el.scrollTop = el.scrollHeight
   }, [answer])
 
-  const busyUI = Boolean(status)
+  const busyUI = Boolean(status || recording.active)
   const hasBody = Boolean(answer || status || error)
 
   function beginAsk(withScreenshot: boolean) {
@@ -65,7 +68,7 @@ export function App() {
   return (
     <div className="root" ref={rootRef} style={{ maxHeight: MAX_H }}>
       <div className="bar glass">
-        <span className={'dot' + (busyUI ? ' live' : '')} />
+        <span className={'dot' + (busyUI ? ' live' : '') + (recording.active ? ' recording' : '')} />
         <input
           ref={inputRef}
           className="ask"
@@ -75,13 +78,26 @@ export function App() {
           onKeyDown={(e) => { if (e.key === 'Enter') beginAsk(false) }}
         />
         <div className="bar-actions">
+          {recording.active && <span className="recording-time">{(recording.elapsedMs / 1000).toFixed(0)}s</span>}
+          <select
+            className="provider"
+            title="Provider"
+            value={config.provider}
+            onChange={(e) => window.ghost.setProvider(e.target.value as AppConfig['provider'])}
+          >
+            {PROVIDERS.map((provider) => (
+              <option key={provider.id} value={provider.id}>{provider.label}</option>
+            ))}
+          </select>
           <select
             className="model"
             title="Model"
             value={config.model}
             onChange={(e) => window.ghost.setModel(e.target.value)}
           >
-            {MODELS.map((m) => <option key={m.id} value={m.id}>{m.label}</option>)}
+            {modelsForProvider(config.provider).map((m) => (
+              <option key={m.id} value={m.id}>{m.label}</option>
+            ))}
           </select>
           <span className="sep" />
           <button className="iconbtn" title="Screenshot & ask (⌘⏎)" onClick={() => beginAsk(true)}>
@@ -100,10 +116,12 @@ export function App() {
                   <div className="error-log">Logs: {config.logPath || '~/Library/Logs/Ghostpane'} · press ⌘⇧L to open</div>
                 </div>
               : answer
-                ? <Markdown>{answer}</Markdown>
+                ? <MarkdownAnswer answer={answer} />
                 : <div className="thinking"><span className="d" /><span className="d" /><span className="d" /> {status}</div>}
           </div>
           <div className="panel-foot">
+            <span>⌘⏎ screenshot</span>
+            <span>hold ⌘⇧⏎ audio + screen</span>
             <span>⌘\ hide</span>
             <span>⌘↑ ⌘↓ scroll</span>
             <span>⌘⇧\ click-through</span>

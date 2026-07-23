@@ -1,19 +1,21 @@
 {
   "name": "ghostpane",
-  "version": "0.1.12",
-  "description": "Invisible AI overlay powered by your Claude subscription",
+  "version": "0.2.1",
+  "description": "Invisible AI overlay powered by your ChatGPT or Claude subscription",
   "license": "MIT",
   "author": "",
   "main": "out/main/index.js",
   "scripts": {
     "dev": "electron-vite dev",
-    "build": "electron-vite build",
+    "build": "npm run native:build && electron-vite build",
     "start": "electron-vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
     "typecheck": "tsc --noEmit -p tsconfig.json",
+    "native:test": "swift test --disable-sandbox --package-path native",
+    "native:build": "bash scripts/build-helper.sh",
     "verify:capture": "electron scripts/verify-capture.cjs",
-    "dist": "electron-vite build && electron-builder --mac"
+    "dist": "npm run build && electron-builder --mac"
   },
   "devDependencies": {
     "@types/node": "^22.10.0",
@@ -28,8 +30,11 @@
     "vitest": "^2.1.8"
   },
   "dependencies": {
+    "katex": "^0.18.1",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "react-markdown": "^9.0.1"
+    "react-markdown": "^9.0.1",
+    "rehype-katex": "^7.0.1",
+    "remark-math": "^6.0.0"
   }
 }

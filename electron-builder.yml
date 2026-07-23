@@ -9,8 +9,15 @@ afterPack: build/afterPack.cjs
 files:
   - out/**/*
   - package.json
+extraResources:
+  - from: build/native/ghostpane-helper
+    to: native/ghostpane-helper
 mac:
   category: public.app-category.productivity
+  extendInfo:
+    NSMicrophoneUsageDescription: Ghostpane records microphone audio only while Command+Shift+Return is held.
+    NSSpeechRecognitionUsageDescription: Ghostpane transcribes held audio locally to add context to your request.
+    NSScreenCaptureUsageDescription: Ghostpane captures your screen and system audio only when you ask it to.
   target:
     - target: dmg
       arch:
