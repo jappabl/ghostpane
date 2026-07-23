@@ -39,7 +39,7 @@ describe('buildCodexArgs', () => {
     })).toEqual([
       'exec', '--ephemeral', '--skip-git-repo-check', '--sandbox', 'read-only',
       '--ignore-rules', '--ignore-user-config', '--json',
-      '--image', '/tmp/screen.png', 'Explain this'
+      '--image', '/tmp/screen.png', '--', 'Explain this'
     ])
   })
 

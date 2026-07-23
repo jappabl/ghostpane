@@ -36,7 +36,7 @@ export function buildCodexArgs(input: Pick<OpenAIAskOptions, 'prompt' | 'imagePa
   ]
   if (input.model) args.push('--model', input.model)
   if (input.imagePath) args.push('--image', input.imagePath)
-  args.push(input.prompt)
+  args.push('--', input.prompt)
   return args
 }
 
