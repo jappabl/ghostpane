@@ -1,3 +1,11 @@
+# Ghostpane v0.2.2
+
+### New in v0.2.2
+- **Cleaner floating surfaces.** The faint rectangle around the overlay is gone;
+  only the command bar and answer panel remain visible.
+
+---
+
 # Ghostpane v0.2.1
 
 ### New in v0.2.1
