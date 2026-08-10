@@ -1,6 +1,6 @@
 <div align="center">
 
-# Ghostpane
+<img src="branding/logo.png" alt="ghostpane" width="440" />
 
 **A translucent, screen-share-hidden AI overlay powered by your ChatGPT or Claude subscription.**
 
@@ -68,6 +68,35 @@ xattr -cr /Applications/Ghostpane.app
 **5. Grant permissions.** Open Ghostpane and press `⌘⏎` once. For screenshots, enable Screen Recording. For held audio, press `⌘⇧⏎`, then enable Accessibility, Microphone, and Speech Recognition. Quit (`⌘⇧Q`) and reopen after changing them. Ghostpane records only while `⌘⇧⏎` remains held.
 
 That's it. Press `⌘\` to summon the bar and start asking.
+
+### Or let your AI assistant install it
+
+Paste this into Claude Code, Cursor, or any AI assistant that can run commands on your Mac:
+
+```text
+Set up Ghostpane, an open-source screen-share-hidden AI overlay for macOS,
+on this machine.
+
+Repo: https://github.com/jappabl/ghostpane
+
+1. Ask which subscription I have. For ChatGPT run:
+   npm install -g @openai/codex && codex login
+   For Claude, make sure Claude Code is installed and I have run `claude` once.
+2. Download the right DMG from
+   https://github.com/jappabl/ghostpane/releases/latest
+   (arm64 for Apple Silicon, plain .dmg for Intel), open it, and move
+   Ghostpane into /Applications.
+3. If macOS calls the app damaged, run: xattr -cr /Applications/Ghostpane.app
+4. Open Ghostpane. Walk me through granting Screen Recording (press cmd+return
+   once to trigger the prompt), and for held audio also Accessibility,
+   Microphone, and Speech Recognition. Remind me to quit (cmd+shift+Q) and
+   reopen after granting.
+5. Teach me the shortcuts: cmd+\ shows the bar, cmd+shift+space types a
+   question, tap cmd+return answers what is on screen, hold cmd+shift+return
+   adds mic and system audio.
+6. Remind me to use it responsibly: never in monitored interviews or
+   proctored exams.
+```
 
 ## Keyboard
 
