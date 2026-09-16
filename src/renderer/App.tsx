@@ -54,7 +54,9 @@ export function App() {
   }, [answer])
 
   const busyUI = Boolean(status || recording.active)
-  const hasBody = Boolean(answer || status || error)
+  // Show the panel only for real output. While it's working, the status signal
+  // is tracked internally (for the busy guard) but nothing is shown on screen.
+  const hasBody = Boolean(answer || error)
 
   function beginAsk(withScreenshot: boolean) {
     if (busyUI) return // one at a time — don't stack requests
@@ -108,9 +110,7 @@ export function App() {
                   <div className="error-msg">{error}</div>
                   <div className="error-log">Logs: {config.logPath || '~/Library/Logs/Ghostpane'} · press ⌘⇧L to open</div>
                 </div>
-              : answer
-                ? <MarkdownAnswer answer={answer} />
-                : <div className="thinking"><span className="d" /><span className="d" /><span className="d" /> {status}</div>}
+              : <MarkdownAnswer answer={answer} />}
           </div>
           <div className="panel-foot">
             <span>⌘⏎ screenshot</span>
