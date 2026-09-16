@@ -67,7 +67,7 @@ export function App() {
 
   return (
     <div className="root" ref={rootRef} style={{ maxHeight: MAX_H }}>
-      <div className="bar glass">
+      <div className="bar surface">
         <span className={'dot' + (busyUI ? ' live' : '') + (recording.active ? ' recording' : '')} />
         <input
           ref={inputRef}
@@ -108,7 +108,7 @@ export function App() {
       </div>
 
       {hasBody && (
-        <div className="panel glass">
+        <div className="panel surface">
           <div className="panel-body" ref={bodyRef}>
             {error
               ? <div className="error">

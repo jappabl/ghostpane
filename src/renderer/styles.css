@@ -6,18 +6,26 @@ html, body {
 }
 
 /* The window resizes to fit .root (see App.tsx). Bar + panel are separate
-   floating glass pieces stacked with a gap, Cluely-style. */
-.root { display: flex; flex-direction: column; gap: 8px; padding: 10px 14px 16px; }
-
-/* ---- shared glass material ---- */
-.glass {
-  background: rgba(20, 20, 24, 0.62);
-  backdrop-filter: blur(32px) saturate(180%);
-  -webkit-backdrop-filter: blur(32px) saturate(180%);
-  border: 1px solid rgba(255, 255, 255, 0.10);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.45), inset 0 1px 0 rgba(255, 255, 255, 0.06);
-  color: #f5f5f7;
+   pieces stacked with a gap. */
+.root {
+  display: flex; flex-direction: column; gap: 8px; padding: 10px 14px 16px;
+  /* Nothing is painted behind the text, so every glyph has to carry its own
+     contrast: on a white background plain white text disappears. The stroke is
+     painted *behind* the fill (paint-order), which gives an even rim without
+     thickening the letterforms the way stacked shadows do. */
+  /* The stroke sits behind the fill, so only about half its width shows as a
+     rim. It needs to be thick enough to read as a dark edge on a white page. */
+  -webkit-text-stroke: 2.6px rgba(0, 0, 0, 0.82);
+  paint-order: stroke fill;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
 }
+/* Small type needs a proportionally thinner rim or it turns to mud. */
+.panel-foot, .kbd, .error-log, .recording-time, .model, .provider {
+  -webkit-text-stroke-width: 1.7px;
+}
+
+/* ---- shared surface: fully clear, so only the text reads on screen ---- */
+.surface { background: transparent; border: 0; box-shadow: none; color: #fff; }
 
 /* ---- command bar ---- */
 .bar {
@@ -45,41 +53,43 @@ html, body {
 .ask {
   flex: 1 1 auto; min-width: 0; height: 100%;
   background: transparent; border: 0; outline: none;
-  color: #f5f5f7; font-size: 14px; letter-spacing: .1px;
+  color: #fff; font-size: 14px; letter-spacing: .1px;
 }
-.ask::placeholder { color: rgba(255, 255, 255, 0.42); }
+.ask::placeholder { color: rgba(255, 255, 255, 0.55); }
 
 .bar-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
 .recording-time {
   color: #ff9a9e; font-size: 11px; font-variant-numeric: tabular-nums;
 }
 
+/* Controls draw no plate of their own; they surface on hover when you reach
+   for them, and otherwise read as floating glyphs like everything else. */
 .iconbtn {
   display: flex; align-items: center; justify-content: center;
   width: 30px; height: 30px; border-radius: 9px;
-  background: rgba(255, 255, 255, 0.06); border: 1px solid rgba(255, 255, 255, 0.08);
-  color: rgba(255, 255, 255, 0.82); cursor: pointer; transition: background .12s, color .12s;
+  background: transparent; border: 0;
+  color: rgba(255, 255, 255, 0.85); cursor: pointer; transition: background .12s, color .12s;
 }
-.iconbtn:hover { background: rgba(255, 255, 255, 0.14); color: #fff; }
-.iconbtn:active { background: rgba(255, 255, 255, 0.2); }
+.iconbtn:hover { background: rgba(255, 255, 255, 0.16); color: #fff; }
+.iconbtn:active { background: rgba(255, 255, 255, 0.24); }
 
 /* keyboard chips */
 .kbd {
   display: inline-flex; align-items: center; gap: 2px;
-  padding: 2px 6px; border-radius: 6px; font-size: 11px; line-height: 1;
-  background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.09);
-  color: rgba(255, 255, 255, 0.62); font-weight: 500;
+  padding: 2px 4px; font-size: 11px; line-height: 1;
+  background: transparent; border: 0;
+  color: rgba(255, 255, 255, 0.7); font-weight: 500;
 }
-.sep { width: 1px; height: 20px; background: rgba(255, 255, 255, 0.12); }
+.sep { width: 1px; height: 20px; background: transparent; }
 
 /* model picker */
 .model, .provider {
   appearance: none; -webkit-appearance: none;
-  background: rgba(255, 255, 255, 0.07); border: 1px solid rgba(255, 255, 255, 0.09);
-  color: rgba(255, 255, 255, 0.78); border-radius: 8px; padding: 5px 8px;
+  background: transparent; border: 0;
+  color: rgba(255, 255, 255, 0.85); border-radius: 8px; padding: 5px 6px;
   font-size: 12px; cursor: pointer; outline: none;
 }
-.model:hover, .provider:hover { background: rgba(255, 255, 255, 0.12); }
+.model:hover, .provider:hover { background: rgba(255, 255, 255, 0.16); }
 .model option, .provider option { color: #111; }
 .provider { max-width: 86px; }
 
@@ -94,7 +104,7 @@ html, body {
 
 .panel-body {
   flex: 1 1 auto; min-height: 0; overflow-y: auto;
-  padding: 12px 14px; font-size: 13.5px; line-height: 1.55; color: #ececf1;
+  padding: 12px 14px; font-size: 13.5px; line-height: 1.55; color: #fff;
 }
 .panel-body::-webkit-scrollbar { width: 8px; }
 .panel-body::-webkit-scrollbar-thumb {
@@ -108,13 +118,14 @@ html, body {
 .panel-body h1,.panel-body h2,.panel-body h3 { font-size: 14px; margin: 10px 0 6px; }
 .panel-body ul,.panel-body ol { margin: 7px 0; padding-left: 18px; }
 .panel-body li { margin: 3px 0; }
+/* Code carries no plate either; the monospace face is what marks it as code. */
 .panel-body code {
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-size: 12px;
-  background: rgba(255, 255, 255, 0.08); padding: 1px 5px; border-radius: 5px;
+  background: transparent; padding: 0;
 }
 .panel-body pre {
-  background: rgba(0, 0, 0, 0.38); padding: 11px 13px; border-radius: 10px;
-  overflow-x: auto; margin: 8px 0; border: 1px solid rgba(255, 255, 255, 0.06);
+  background: transparent; padding: 0; border: 0;
+  overflow-x: auto; margin: 8px 0;
 }
 .panel-body pre code { background: none; padding: 0; }
 
@@ -132,18 +143,17 @@ html, body {
   white-space: normal;
 }
 
-.thinking { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.6); font-size: 13px; }
+.thinking { display: flex; align-items: center; gap: 8px; color: rgba(255,255,255,0.8); font-size: 13px; }
 .thinking .d { width: 5px; height: 5px; border-radius: 50%; background: currentColor; animation: pulse 1s infinite; }
 .thinking .d:nth-child(2) { animation-delay: .15s; }
 .thinking .d:nth-child(3) { animation-delay: .3s; }
 
 .error { font-size: 13px; }
 .error-msg { color: #ff8a8a; line-height: 1.5; }
-.error-log { margin-top: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.45);
+.error-log { margin-top: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.6);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
 
 .panel-foot {
   flex: 0 0 auto; display: flex; gap: 10px; padding: 7px 14px;
-  border-top: 1px solid rgba(255, 255, 255, 0.07);
-  font-size: 10.5px; color: rgba(255, 255, 255, 0.4);
+  font-size: 10.5px; color: rgba(255, 255, 255, 0.55);
 }
