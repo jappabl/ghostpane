@@ -1,5 +1,4 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
-import { CameraIcon } from './components/Icons'
 import { MarkdownAnswer } from './components/MarkdownAnswer'
 import type { AppConfig, RecordingState } from '../shared/ipc'
 import { PROVIDERS, modelsForProvider } from '../shared/providers'
@@ -68,7 +67,6 @@ export function App() {
   return (
     <div className="root" ref={rootRef} style={{ maxHeight: MAX_H }}>
       <div className="bar surface">
-        <span className={'dot' + (busyUI ? ' live' : '') + (recording.active ? ' recording' : '')} />
         <input
           ref={inputRef}
           className="ask"
@@ -99,11 +97,6 @@ export function App() {
               <option key={m.id} value={m.id}>{m.label}</option>
             ))}
           </select>
-          <span className="sep" />
-          <button className="iconbtn" title="Screenshot & ask (⌘⏎)" onClick={() => beginAsk(true)}>
-            <CameraIcon />
-          </button>
-          <kbd className="kbd">⌘⏎</kbd>
         </div>
       </div>
 
