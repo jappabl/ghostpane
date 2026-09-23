@@ -1,10 +1,14 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { MarkdownAnswer } from './components/MarkdownAnswer'
+import { ChunkCoalescer } from './chunk-coalescer'
 import type { AppConfig, RecordingState } from '../shared/ipc'
-import { PROVIDERS, modelsForProvider } from '../shared/providers'
+import { PROVIDERS } from '../shared/providers'
 
 // Cap the overlay at ~85% of the screen; taller answers scroll inside.
 const MAX_H = Math.floor((window.screen?.availHeight ?? 900) * 0.85)
+// One answer update per ~60ms instead of one per streamed token. Still reads
+// as live streaming; keeps markdown parsing, KaTeX and window resizes linear.
+const STREAM_FLUSH_MS = 60
 
 export function App() {
   const [prompt, setPrompt] = useState('')
@@ -12,11 +16,18 @@ export function App() {
   const [status, setStatus] = useState('') // main-driven: '' | '📸 Taking screenshot…' | '💭 Thinking…' …
   const [recording, setRecording] = useState<RecordingState>({ active: false, elapsedMs: 0 })
   const [error, setError] = useState('')
-  const [config, setConfig] = useState<AppConfig>({ provider: 'openai', model: '', logPath: '' })
+  const [config, setConfig] = useState<AppConfig>({ provider: 'openai', model: '', models: [], logPath: '' })
   const inputRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const lastH = useRef(0)
+  const streamRef = useRef<ChunkCoalescer | null>(null)
+  if (!streamRef.current) {
+    streamRef.current = new ChunkCoalescer(STREAM_FLUSH_MS, (text) => {
+      setStatus('')
+      setAnswer((a) => a + text)
+    })
+  }
 
   // Report the content height to main so the window fits the floating pieces.
   useLayoutEffect(() => {
@@ -33,11 +44,13 @@ export function App() {
   }, [])
 
   useEffect(() => {
-    window.ghost.onAnswerChunk((c) => { setStatus(''); setAnswer((a) => a + c.text) })
-    window.ghost.onAnswerDone(() => setStatus(''))
-    window.ghost.onAnswerError((e) => { setStatus(''); setError(e.message) })
+    const stream = streamRef.current!
+    window.ghost.onAnswerChunk((c) => stream.push(c.text))
+    // Flush the tail the buffer is still holding before the answer settles.
+    window.ghost.onAnswerDone(() => { stream.flush(); setStatus('') })
+    window.ghost.onAnswerError((e) => { stream.reset(); setStatus(''); setError(e.message) })
     // Main drives status through each phase; a new status starts a fresh answer.
-    window.ghost.onStatus((s) => { if (s) { setAnswer(''); setError(''); setStatus(s) } else setStatus('') })
+    window.ghost.onStatus((s) => { if (s) { stream.reset(); setAnswer(''); setError(''); setStatus(s) } else setStatus('') })
     window.ghost.onRecording(setRecording)
     window.ghost.onConfig((c) => setConfig(c))
     window.ghost.onMainEvent((e) => {
@@ -45,6 +58,7 @@ export function App() {
       if (e === 'scroll-up') bodyRef.current?.scrollBy({ top: -140 })
       if (e === 'scroll-down') bodyRef.current?.scrollBy({ top: 140 })
     })
+    return () => stream.reset()
   }, [])
 
   // Follow the stream: keep the newest text in view.
@@ -61,6 +75,7 @@ export function App() {
   function beginAsk(withScreenshot: boolean) {
     if (busyUI) return // one at a time — don't stack requests
     if (!withScreenshot && !prompt.trim()) return
+    streamRef.current!.reset() // drop any tail still buffered from the last answer
     setAnswer(''); setError(''); setStatus('💭 Thinking…')
     window.ghost.ask({ prompt, withScreenshot })
     setPrompt('') // clear the box so it's ready for the next question
@@ -95,7 +110,7 @@ export function App() {
             value={config.model}
             onChange={(e) => window.ghost.setModel(e.target.value)}
           >
-            {modelsForProvider(config.provider).map((m) => (
+            {config.models.map((m) => (
               <option key={m.id} value={m.id}>{m.label}</option>
             ))}
           </select>

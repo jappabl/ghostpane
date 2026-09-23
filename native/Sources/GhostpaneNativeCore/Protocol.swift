@@ -3,13 +3,37 @@ import Foundation
 public struct HelperCommand: Codable, Equatable, Sendable {
     public let protocolVersion: Int
     public let type: String
+    /// Correlates a request that gets a reply (ocr) with that reply.
+    public let id: String?
+    /// Image to read, for ocr.
+    public let path: String?
 
-    public init(protocolVersion: Int = 1, type: String) {
+    public init(protocolVersion: Int = 1, type: String, id: String? = nil, path: String? = nil) {
         self.protocolVersion = protocolVersion
         self.type = type
+        self.id = id
+        self.path = path
     }
 
     public var isSupported: Bool { protocolVersion == 1 }
+}
+
+/// One line of recognised text. Position and size are fractions of the image,
+/// measured from its top-left corner like screen coordinates.
+public struct TextLine: Codable, Equatable, Sendable {
+    public let text: String
+    public let x: Double
+    public let y: Double
+    public let width: Double
+    public let height: Double
+
+    public init(text: String, x: Double, y: Double, width: Double, height: Double) {
+        self.text = text
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
+    }
 }
 
 public struct HelperEvent: Codable, Equatable, Sendable {
@@ -21,6 +45,8 @@ public struct HelperEvent: Codable, Equatable, Sendable {
     public let message: String?
     public let elapsedMs: Int?
     public let permissions: PermissionState?
+    public let id: String?
+    public let lines: [TextLine]?
 
     public init(
         protocolVersion: Int = 1,
@@ -30,7 +56,9 @@ public struct HelperEvent: Codable, Equatable, Sendable {
         durationMs: Int? = nil,
         message: String? = nil,
         elapsedMs: Int? = nil,
-        permissions: PermissionState? = nil
+        permissions: PermissionState? = nil,
+        id: String? = nil,
+        lines: [TextLine]? = nil
     ) {
         self.protocolVersion = protocolVersion
         self.type = type
@@ -40,6 +68,8 @@ public struct HelperEvent: Codable, Equatable, Sendable {
         self.message = message
         self.elapsedMs = elapsedMs
         self.permissions = permissions
+        self.id = id
+        self.lines = lines
     }
 
     public static func tap() -> HelperEvent { HelperEvent(type: "tap") }
@@ -69,6 +99,13 @@ public struct HelperEvent: Codable, Equatable, Sendable {
     }
     public static func permissionState(_ permissions: PermissionState) -> HelperEvent {
         HelperEvent(type: "permission-state", permissions: permissions)
+    }
+    public static func ocrResult(id: String, lines: [TextLine]) -> HelperEvent {
+        HelperEvent(type: "ocr-result", id: id, lines: lines)
+    }
+    /// Not "error": that event means the held-audio flow failed, and the app shows it.
+    public static func ocrFailed(id: String, message: String) -> HelperEvent {
+        HelperEvent(type: "ocr-failed", message: message, id: id)
     }
 }
 

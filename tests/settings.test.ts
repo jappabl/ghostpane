@@ -17,7 +17,7 @@ describe('normalizeSettings', () => {
   it('migrates a legacy Claude model while defaulting to ChatGPT', () => {
     expect(normalizeSettings({ model: 'sonnet' })).toEqual({
       provider: 'openai',
-      models: { openai: '', claude: 'sonnet' }
+      models: { openai: '', claude: 'sonnet', local: '' }
     })
   })
 
@@ -27,7 +27,7 @@ describe('normalizeSettings', () => {
       models: { openai: '--bad', claude: 'bogus' }
     })).toEqual({
       provider: 'openai',
-      models: { openai: '', claude: '' }
+      models: { openai: '', claude: '', local: '' }
     })
   })
 
@@ -37,7 +37,32 @@ describe('normalizeSettings', () => {
       models: { openai: 'gpt-5.6-terra', claude: 'opus' }
     })).toEqual({
       provider: 'claude',
-      models: { openai: 'gpt-5.6-terra', claude: 'opus' }
+      models: { openai: 'gpt-5.6-terra', claude: 'opus', local: '' }
+    })
+  })
+})
+
+describe('local provider', () => {
+  it('is a known provider', () => {
+    expect(isProviderId('local')).toBe(true)
+  })
+
+  it('accepts whatever model ids the local server reports', () => {
+    for (const id of ['', 'llama3.2:latest', 'hf.co/bartowski/Qwen2.5-7B-GGUF:Q4_K_M', 'lmstudio-community/gemma-3-4b-it']) {
+      expect(isModelForProvider('local', id), id).toBe(true)
+    }
+  })
+
+  it('rejects ids that are not model names', () => {
+    for (const id of ['--flag', 'has space', 'a'.repeat(300), 42]) {
+      expect(isModelForProvider('local', id), String(id)).toBe(false)
+    }
+  })
+
+  it('persists a local model choice alongside the others', () => {
+    expect(normalizeSettings({ provider: 'local', models: { local: 'mistral:7b' } })).toEqual({
+      provider: 'local',
+      models: { openai: '', claude: '', local: 'mistral:7b' }
     })
   })
 })

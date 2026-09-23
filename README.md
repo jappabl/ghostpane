@@ -50,6 +50,8 @@ codex login
 
 If you already have the ChatGPT macOS app, Ghostpane can use its bundled Codex executable. Run `codex login` once so subscription authentication is ready. To use Claude instead, install Claude Code, run `claude`, then choose Claude from the provider dropdown.
 
+**Or run it all on your machine.** Choose **Local** from the provider dropdown. Ghostpane finds whichever local model server you have — Ollama, LM Studio, llama.cpp, Jan, vLLM or GPT4All — and lists its models. If Ollama or LM Studio is installed but not running, Ghostpane starts it. Screenshots work with any model: for one that can't see images, Ghostpane reads the screen's text on-device and sends that instead. Nothing leaves your Mac. New to local models? `brew install ollama && ollama pull gemma3` gets you one that also understands images and diagrams.
+
 **2. Download Ghostpane.** Grab the right file from the [latest release](https://github.com/jappabl/ghostpane/releases/latest):
 
 - Apple Silicon (M1/M2/M3): `Ghostpane-<version>-arm64.dmg`

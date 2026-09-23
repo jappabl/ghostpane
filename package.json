@@ -15,6 +15,7 @@
     "native:test": "swift test --disable-sandbox --package-path native",
     "native:build": "bash scripts/build-helper.sh",
     "verify:capture": "electron scripts/verify-capture.cjs",
+    "verify:memory": "electron scripts/verify-memory.cjs",
     "dist": "npm run build && electron-builder --mac"
   },
   "devDependencies": {

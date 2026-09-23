@@ -32,4 +32,35 @@ final class ProtocolTests: XCTestCase {
         XCTAssertTrue(try JSONDecoder().decode(HelperCommand.self, from: valid).isSupported)
         XCTAssertFalse(try JSONDecoder().decode(HelperCommand.self, from: future).isSupported)
     }
+
+    func testOcrCommandCarriesRequestIdAndImagePath() throws {
+        let data = Data(#"{"protocolVersion":1,"type":"ocr","id":"7","path":"/tmp/screen.png"}"#.utf8)
+        let command = try JSONDecoder().decode(HelperCommand.self, from: data)
+
+        XCTAssertEqual(command.type, "ocr")
+        XCTAssertEqual(command.id, "7")
+        XCTAssertEqual(command.path, "/tmp/screen.png")
+    }
+
+    func testOcrResultCarriesRequestIdAndPositionedLines() throws {
+        let event = HelperEvent.ocrResult(id: "7", lines: [
+            TextLine(text: "def twoSum", x: 0.1, y: 0.2, width: 0.3, height: 0.05)
+        ])
+        let object = try XCTUnwrap(JSONSerialization.jsonObject(with: JSONEncoder().encode(event)) as? [String: Any])
+        let lines = try XCTUnwrap(object["lines"] as? [[String: Any]])
+
+        XCTAssertEqual(object["type"] as? String, "ocr-result")
+        XCTAssertEqual(object["id"] as? String, "7")
+        XCTAssertEqual(lines.first?["text"] as? String, "def twoSum")
+        XCTAssertEqual(lines.first?["x"] as? Double, 0.1)
+        XCTAssertEqual(lines.first?["y"] as? Double, 0.2)
+    }
+
+    func testOcrFailureIsDistinctFromTheAudioErrorEvent() throws {
+        let event = HelperEvent.ocrFailed(id: "7", message: "unreadable")
+        XCTAssertEqual(event.type, "ocr-failed")
+        XCTAssertEqual(event.id, "7")
+        XCTAssertEqual(event.message, "unreadable")
+    }
 }
+

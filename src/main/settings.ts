@@ -9,7 +9,7 @@ export interface Settings {
   models: Record<ProviderId, string>
 }
 
-const DEFAULTS: Settings = { provider: 'openai', models: { openai: '', claude: '' } }
+const DEFAULTS: Settings = { provider: 'openai', models: { openai: '', claude: '', local: '' } }
 let cache: Settings | null = null
 
 function file(): string { return join(app.getPath('userData'), 'settings.json') }
@@ -28,7 +28,8 @@ export function normalizeSettings(raw: unknown): Settings {
       openai: isModelForProvider('openai', storedModels.openai) ? storedModels.openai : '',
       claude: isModelForProvider('claude', storedModels.claude)
         ? storedModels.claude
-        : legacyClaude
+        : legacyClaude,
+      local: isModelForProvider('local', storedModels.local) ? storedModels.local : ''
     }
   }
 }

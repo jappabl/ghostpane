@@ -4,6 +4,7 @@ import { homedir } from 'os'
 import { join } from 'path'
 import type { ProviderAskOptions } from './provider-types'
 import { MATH_FORMATTING_GUIDANCE } from './response-guidance'
+import { MAX_LINE_BYTES, MAX_STDERR_BYTES, PROVIDER_TIMEOUT_MS } from './provider-limits'
 
 // GUI apps launched from Finder/.dmg get a bare PATH (/usr/bin:/bin:...) that
 // omits Homebrew and other common install dirs, so `claude` isn't found. Resolve
@@ -82,7 +83,23 @@ export function ask(opts: AskOptions): void {
   let stderr = ''
   let done = false
   let sawDelta = false
-  const finishOnce = (fn: () => void) => { if (!done) { done = true; fn() } }
+  let watchdog: ReturnType<typeof setTimeout> | null = null
+  const finishOnce = (fn: () => void) => {
+    if (done) return
+    done = true
+    if (watchdog) { clearTimeout(watchdog); watchdog = null }
+    fn()
+  }
+
+  const timeoutMs = opts.timeoutMs ?? PROVIDER_TIMEOUT_MS
+  watchdog = setTimeout(() => {
+    watchdog = null
+    logIt('error', 'claude timed out; killing it', { timeoutMs })
+    try { child.kill() } catch { /* already gone */ }
+    finishOnce(() => opts.onError(
+      `Claude timed out after ${Math.round(timeoutMs / 1000)}s. Press ⌘⏎ to try again.`
+    ))
+  }, timeoutMs)
 
   child.on('error', (e: NodeJS.ErrnoException) => {
     const msg = e.code === 'ENOENT'
@@ -92,7 +109,8 @@ export function ask(opts: AskOptions): void {
     finishOnce(() => opts.onError(msg))
   })
 
-  child.stderr?.on('data', (d) => { stderr += d.toString() })
+  // Keep only the tail: that is where the failure reason lands.
+  child.stderr?.on('data', (d) => { stderr = (stderr + d.toString()).slice(-MAX_STDERR_BYTES) })
 
   child.stdout?.on('data', (d) => {
     buf += d.toString()
@@ -119,6 +137,10 @@ export function ask(opts: AskOptions): void {
           if (block.type === 'text' && block.text) opts.onChunk(block.text)
         }
       }
+    }
+    if (buf.length > MAX_LINE_BYTES) {
+      logIt('warn', 'discarding oversized claude line', { bytes: buf.length })
+      buf = ''
     }
   })
 

@@ -2,9 +2,13 @@ import { app, globalShortcut, ipcMain, screen, shell, BrowserWindow } from 'elec
 import { join } from 'path'
 import { createOverlay, applyFollowBehavior } from './overlay-window'
 import { registerShortcuts, syncAudioSetupShortcut } from './register-shortcuts'
-import { captureBehindOverlay, screenPermission, warmUpCapture } from './screenshot'
+import { captureBehindOverlay, localImageDataUrl, screenPermission, sweepStaleCaptures, warmUpCapture } from './screenshot'
 import { ask as askClaude, resolveClaude } from './claude'
 import { askOpenAI, resolveCodex } from './openai'
+import { askLocal, discoverLocalServer, localModelOptions, waitForServer } from './local-llm'
+import { LocalLauncher } from './local-launcher'
+import { layoutScreenText } from './screen-text'
+import { modelsForProvider } from '../shared/providers'
 import { initLogger, getLogPath, getLogDir, log } from './logger'
 import { getSettings, setModel, setProvider } from './settings'
 import { CHANNELS, type MainEvent, type AppConfig } from '../shared/ipc'
@@ -30,6 +34,7 @@ let audioActive = false
 let audioPermissionRequestSent = false
 let nativeHelper: NativeHelper | null = null
 const activeOwners = new Set<OwnedPaths>()
+const localLauncher = new LocalLauncher()
 
 function send(channel: string, payload?: unknown) {
   win?.webContents.send(channel, payload)
@@ -60,15 +65,39 @@ function onScreenshotError(err: unknown) {
   send(CHANNELS.answerError, { message: (err as Error).message })
 }
 
-function pushConfig() {
+let configSeq = 0
+async function pushConfig() {
+  const seq = ++configSeq
   const settings = getSettings()
+  const provider = settings.provider
+  const models = provider === 'local'
+    ? localModelOptions(await discoverLocalServer())
+    : modelsForProvider(provider)
+  if (seq !== configSeq) return // a newer push (e.g. the user switched provider) wins
+  const saved = settings.models[provider]
   const cfg: AppConfig = {
-    provider: settings.provider,
-    model: settings.models[settings.provider],
+    provider,
+    // A saved local model the server no longer has shows as Auto — what will run.
+    model: models.some((m) => m.id === saved) ? saved : '',
+    models,
     logPath: getLogPath()
   }
   send(CHANNELS.config, cfg)
 }
+
+// Picking Local should just work: when nothing is running but a runtime is
+// installed, start it, then fill the model menu once it answers.
+async function connectLocal() {
+  await pushConfig()
+  if (await discoverLocalServer()) return
+  const runtime = localLauncher.start()
+  if (!runtime) return
+  log('info', 'starting local runtime', { runtime })
+  await waitForServer({}, 20_000)
+  await pushConfig()
+}
+
+const PROVIDER_LABELS = { openai: 'ChatGPT', claude: 'Claude', local: 'your local model' } as const
 
 function runAsk(prompt: string, imagePath?: string) {
   busy = true
@@ -82,13 +111,24 @@ function runAsk(prompt: string, imagePath?: string) {
     busy = false
     activeOwners.delete(owned)
     void owned.cleanup()
+    if (settings.provider === 'local') void pushConfig() // the ask may have started the server
   }
   reveal() // ensure the answer/error is actually visible
-  const providerLabel = settings.provider === 'openai' ? 'ChatGPT' : 'Claude'
+  const providerLabel = PROVIDER_LABELS[settings.provider]
   send(CHANNELS.status, imagePath
     ? `📸 Asking ${providerLabel} about your screen…`
     : `💭 Asking ${providerLabel}…`)
-  routeAsk(settings.provider, { openai: askOpenAI, claude: askClaude }, {
+  const helper = nativeHelper
+  const local = (options: Parameters<typeof askLocal>[0]) => askLocal({
+    ...options,
+    startServer: async () => localLauncher.start(),
+    imageDataUrl: localImageDataUrl,
+    // On-device OCR in the native helper, so a text-only model can still read the screen.
+    readScreenText: helper?.running
+      ? async (path) => layoutScreenText(await helper.recognizeText(path))
+      : undefined
+  })
+  routeAsk(settings.provider, { openai: askOpenAI, claude: askClaude, local }, {
     prompt: prompt || 'Read the question or content on screen and answer concisely.',
     imagePath,
     model: settings.models[settings.provider],
@@ -252,13 +292,16 @@ app.whenReady().then(() => {
   log(codex.found ? 'info' : 'warn', 'codex resolution', { bin: codex.bin, found: codex.found })
   log('info', 'screen recording permission', { status: screenPermission() })
   warmUpCapture() // prime ScreenCaptureKit so the first ⌘⏎ works immediately
+  void sweepStaleCaptures() // clear screenshots a previous crash abandoned
 
   win = createOverlay(
     join(__dirname, '../preload/index.js'),
     process.env.ELECTRON_RENDERER_URL ?? null
   )
 
-  win.webContents.on('did-finish-load', pushConfig)
+  win.webContents.on('did-finish-load', () => {
+    void (getSettings().provider === 'local' ? connectLocal() : pushConfig())
+  })
 
   const results = registerShortcuts(handleEvent, {
     register: (acc, cb) => globalShortcut.register(acc, cb)
@@ -317,7 +360,7 @@ app.whenReady().then(() => {
     const provider = parseProvider(value)
     if (!provider) return
     setProvider(provider)
-    pushConfig()
+    void (provider === 'local' ? connectLocal() : pushConfig())
   })
 
   ipcMain.on(CHANNELS.setModel, (event, value: unknown) => {
@@ -326,7 +369,7 @@ app.whenReady().then(() => {
     const model = parseModel(provider, value)
     if (model === null) return
     setModel(model, provider)
-    pushConfig()
+    void pushConfig()
   })
 
   ipcMain.on(CHANNELS.openExternal, (event, value: unknown) => {
@@ -352,6 +395,7 @@ app.whenReady().then(() => {
 })
 
 app.on('will-quit', () => nativeHelper?.stop())
+app.on('will-quit', () => localLauncher.stop()) // only a server Ghostpane itself started
 app.on('will-quit', () => globalShortcut.unregisterAll())
 app.on('will-quit', () => { for (const owner of activeOwners) void owner.cleanup() })
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit() })

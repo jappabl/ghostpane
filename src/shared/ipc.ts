@@ -1,4 +1,4 @@
-import { modelsForProvider, type ProviderId } from './providers'
+import { modelsForProvider, type ModelOption, type ProviderId } from './providers'
 
 export const CHANNELS = {
   mainEvent: 'main:event',        // main → renderer: MainEvent
@@ -32,6 +32,9 @@ export const MODELS = modelsForProvider('claude')
 export interface AppConfig {
   provider: ProviderId
   model: string
+  // Choices for the model menu. Fixed for cloud providers; for Local, whatever
+  // the running server has installed.
+  models: readonly ModelOption[]
   logPath: string
 }
 

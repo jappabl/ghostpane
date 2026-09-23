@@ -20,6 +20,7 @@ export interface ProviderAskOptions {
   onLog?: (level: LogLevel, message: string, extra?: unknown) => void
   spawnFn?: typeof spawn
   pathEnv?: string
+  timeoutMs?: number
 }
 
 export interface AiProvider {

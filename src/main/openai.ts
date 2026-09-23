@@ -4,6 +4,7 @@ import { homedir, tmpdir } from 'os'
 import { join } from 'path'
 import type { ProviderAskOptions, ProviderAvailability } from './provider-types'
 import { withResponseGuidance } from './response-guidance'
+import { MAX_LINE_BYTES, MAX_STDERR_BYTES, PROVIDER_TIMEOUT_MS } from './provider-limits'
 
 const EXTRA_DIRS = [
   '/Applications/ChatGPT.app/Contents/Resources',
@@ -62,7 +63,9 @@ export function askOpenAI(options: OpenAIAskOptions): void {
   let buffer = ''
   let stderr = ''
 
+  let watchdog: ReturnType<typeof setTimeout> | null = null
   const cleanup = () => {
+    if (watchdog) { clearTimeout(watchdog); watchdog = null }
     if (ownedCwd) {
       try { rmSync(ownedCwd, { recursive: true, force: true }) } catch { /* best effort */ }
     }
@@ -86,6 +89,16 @@ export function askOpenAI(options: OpenAIAskOptions): void {
     return
   }
 
+  const timeoutMs = options.timeoutMs ?? PROVIDER_TIMEOUT_MS
+  watchdog = setTimeout(() => {
+    watchdog = null
+    logIt('error', 'codex timed out; killing it', { timeoutMs })
+    try { child.kill() } catch { /* already gone */ }
+    finishOnce(() => options.onError(
+      `ChatGPT timed out after ${Math.round(timeoutMs / 1000)}s. Press ⌘⏎ to try again.`
+    ))
+  }, timeoutMs)
+
   logIt('info', 'spawning codex', {
     bin: resolved.bin,
     model: options.model || '(default)',
@@ -99,7 +112,8 @@ export function askOpenAI(options: OpenAIAskOptions): void {
     logIt('error', 'codex process error', { code: error.code, message: error.message })
     finishOnce(() => options.onError(message))
   })
-  child.stderr?.on('data', (data) => { stderr += data.toString() })
+  // Keep only the tail: that is where the failure reason lands.
+  child.stderr?.on('data', (data) => { stderr = (stderr + data.toString()).slice(-MAX_STDERR_BYTES) })
   child.stdout?.on('data', (data) => {
     buffer += data.toString()
     let newline
@@ -117,6 +131,10 @@ export function askOpenAI(options: OpenAIAskOptions): void {
       } catch {
         logIt('warn', 'ignoring invalid codex JSONL')
       }
+    }
+    if (buffer.length > MAX_LINE_BYTES) {
+      logIt('warn', 'discarding oversized codex line', { bytes: buffer.length })
+      buffer = ''
     }
   })
   child.on('close', (code: number) => {

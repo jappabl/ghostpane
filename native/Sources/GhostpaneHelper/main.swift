@@ -134,10 +134,30 @@ private final class HelperRuntime: @unchecked Sendable {
                 await controller.cancel()
                 emit(.holdCancelled())
             }
+        case "ocr":
+            recognizeText(command)
         case "shutdown":
             shutdown()
         default:
             emit(.error("Unsupported helper command: \(command.type)"))
+        }
+    }
+
+    /// Vision work is synchronous and can take a second on a dense screen, so it
+    /// runs off the main queue; the protocol writer is safe to use from any thread.
+    private func recognizeText(_ command: HelperCommand) {
+        let id = command.id ?? ""
+        guard let path = command.path, !id.isEmpty else {
+            emit(.ocrFailed(id: id, message: "OCR needs a request id and an image path."))
+            return
+        }
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            do {
+                let lines = try ScreenTextRecognizer.recognize(url: URL(fileURLWithPath: path))
+                self?.emit(.ocrResult(id: id, lines: lines))
+            } catch {
+                self?.emit(.ocrFailed(id: id, message: error.localizedDescription))
+            }
         }
     }
 
