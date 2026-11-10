@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from 'vitest'
 import { EventEmitter } from 'events'
 import { ask, SYSTEM_PROMPT } from '../src/main/claude'
-import { MATH_FORMATTING_GUIDANCE } from '../src/main/response-guidance'
+import { MATH_FORMATTING_GUIDANCE, MULTIPLE_CHOICE_GUIDANCE } from '../src/main/response-guidance'
 
 function fakeSpawn(lines: string[], exitCode = 0) {
   return () => {
@@ -21,6 +21,12 @@ describe('ask', () => {
     expect(SYSTEM_PROMPT).toContain(MATH_FORMATTING_GUIDANCE)
     expect(SYSTEM_PROMPT).toContain('Use `$...$` for inline math')
     expect(SYSTEM_PROMPT).toContain('Use `$$...$$` for display math')
+  })
+
+  it('asks for the multiple-choice marker and a final answer line', () => {
+    expect(SYSTEM_PROMPT).toContain(MULTIPLE_CHOICE_GUIDANCE)
+    expect(SYSTEM_PROMPT).toContain('`MULTIPLE CHOICE`')
+    expect(SYSTEM_PROMPT).toContain('`Answer: X`')
   })
 
   it('streams assistant text chunks then done', async () => {

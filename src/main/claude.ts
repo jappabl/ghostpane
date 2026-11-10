@@ -3,7 +3,7 @@ import { existsSync } from 'fs'
 import { homedir } from 'os'
 import { join } from 'path'
 import type { ProviderAskOptions } from './provider-types'
-import { MATH_FORMATTING_GUIDANCE } from './response-guidance'
+import { MATH_FORMATTING_GUIDANCE, MULTIPLE_CHOICE_GUIDANCE } from './response-guidance'
 import { MAX_LINE_BYTES, MAX_STDERR_BYTES, PROVIDER_TIMEOUT_MS } from './provider-limits'
 
 // GUI apps launched from Finder/.dmg get a bare PATH (/usr/bin:/bin:...) that
@@ -38,6 +38,7 @@ export const SYSTEM_PROMPT = [
   '- The window is narrow (~500px). Keep lines short; never draw wide ASCII tables.',
   '- Use Markdown: fenced code blocks with a language tag for any code.',
   MATH_FORMATTING_GUIDANCE,
+  MULTIPLE_CHOICE_GUIDANCE,
   '- For a coding/interview problem on screen: give the complete, correct solution',
   '  first (in a code block), then one line on approach and time/space complexity.',
   '- If the screenshot is ambiguous, state your single best interpretation and answer it;',

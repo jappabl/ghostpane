@@ -1,6 +1,7 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { MarkdownAnswer } from './components/MarkdownAnswer'
 import { ChunkCoalescer } from './chunk-coalescer'
+import { presentAnswer } from './choice-answer'
 import type { AppConfig, RecordingState } from '../shared/ipc'
 import { PROVIDERS } from '../shared/providers'
 
@@ -13,6 +14,7 @@ const STREAM_FLUSH_MS = 60
 export function App() {
   const [prompt, setPrompt] = useState('')
   const [answer, setAnswer] = useState('')
+  const [done, setDone] = useState(false)
   const [status, setStatus] = useState('') // main-driven: '' | '📸 Taking screenshot…' | '💭 Thinking…' …
   const [recording, setRecording] = useState<RecordingState>({ active: false, elapsedMs: 0 })
   const [error, setError] = useState('')
@@ -47,10 +49,10 @@ export function App() {
     const stream = streamRef.current!
     window.ghost.onAnswerChunk((c) => stream.push(c.text))
     // Flush the tail the buffer is still holding before the answer settles.
-    window.ghost.onAnswerDone(() => { stream.flush(); setStatus('') })
+    window.ghost.onAnswerDone(() => { stream.flush(); setDone(true); setStatus('') })
     window.ghost.onAnswerError((e) => { stream.reset(); setStatus(''); setError(e.message) })
     // Main drives status through each phase; a new status starts a fresh answer.
-    window.ghost.onStatus((s) => { if (s) { stream.reset(); setAnswer(''); setError(''); setStatus(s) } else setStatus('') })
+    window.ghost.onStatus((s) => { if (s) { stream.reset(); setAnswer(''); setDone(false); setError(''); setStatus(s) } else setStatus('') })
     window.ghost.onRecording(setRecording)
     window.ghost.onConfig((c) => setConfig(c))
     window.ghost.onMainEvent((e) => {
@@ -70,13 +72,15 @@ export function App() {
   const busyUI = Boolean(status || recording.active)
   // Show the panel only for real output. While it's working, the status signal
   // is tracked internally (for the busy guard) but nothing is shown on screen.
-  const hasBody = Boolean(answer || error)
+  // A multiple-choice answer shows only its letter; its reasoning stays hidden.
+  const view = presentAnswer(answer, done)
+  const hasBody = Boolean(error || view.kind !== 'pending')
 
   function beginAsk(withScreenshot: boolean) {
     if (busyUI) return // one at a time — don't stack requests
     if (!withScreenshot && !prompt.trim()) return
     streamRef.current!.reset() // drop any tail still buffered from the last answer
-    setAnswer(''); setError(''); setStatus('💭 Thinking…')
+    setAnswer(''); setDone(false); setError(''); setStatus('💭 Thinking…')
     window.ghost.ask({ prompt, withScreenshot })
     setPrompt('') // clear the box so it's ready for the next question
   }
@@ -123,17 +127,11 @@ export function App() {
             {error
               ? <div className="error">
                   <div className="error-msg">{error}</div>
-                  <div className="error-log">Logs: {config.logPath || '~/Library/Logs/Ghostpane'} · press ⌘⇧L to open</div>
+                  <div className="error-log">Logs: {config.logPath || '~/Library/Logs/Ghostpane'}</div>
                 </div>
-              : <MarkdownAnswer answer={answer} />}
-          </div>
-          <div className="panel-foot">
-            <span>⌘⏎ screenshot</span>
-            <span>hold ⌘⇧⏎ audio + screen</span>
-            <span>⌘\ hide</span>
-            <span>⌘↑ ⌘↓ scroll</span>
-            <span>⌘⇧\ click-through</span>
-            <span>⌘⇧L logs</span>
+              : view.kind === 'letter'
+                ? <div className="choice-letter">{view.letter}</div>
+                : view.kind === 'text' && <MarkdownAnswer answer={view.text} />}
           </div>
         </div>
       )}

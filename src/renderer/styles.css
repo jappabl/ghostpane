@@ -20,7 +20,7 @@ html, body {
   text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
 }
 /* Small type needs a proportionally thinner rim or it turns to mud. */
-.panel-foot, .kbd, .error-log, .recording-time, .model, .provider {
+.kbd, .error-log, .recording-time, .model, .provider {
   -webkit-text-stroke-width: 1.7px;
 }
 
@@ -111,12 +111,11 @@ html, body {
 }
 
 
+/* A multiple-choice answer: just the letter. */
+.choice-letter { font-size: 22px; font-weight: 600; line-height: 1.2; }
+
 .error { font-size: 13px; }
 .error-msg { color: #ff8a8a; line-height: 1.5; }
 .error-log { margin-top: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.6);
   font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
 
-.panel-foot {
-  flex: 0 0 auto; display: flex; gap: 10px; padding: 7px 14px;
-  font-size: 10.5px; color: rgba(255, 255, 255, 0.55);
-}
