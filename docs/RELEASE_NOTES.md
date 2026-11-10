@@ -1,3 +1,16 @@
+# Ghostpane v0.2.4
+
+### New in v0.2.4
+- **Multiple choice shows just the letter.** For an A–D (or A–E) question,
+  Ghostpane still works the problem out, but shows only the answer letter.
+- **Local models.** Pick a model running in Ollama, LM Studio, Jan, GPT4All,
+  llama.cpp or vLLM. Text-only models can still read your screen through
+  on-device text recognition.
+- **Quieter overlay.** No more status text while it works, and the hotkey hints,
+  status dot and screenshot button are gone. Only the answer appears.
+
+---
+
 # Ghostpane v0.2.1
 
 ### New in v0.2.1
