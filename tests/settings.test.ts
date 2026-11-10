@@ -14,11 +14,17 @@ describe('provider catalog', () => {
 })
 
 describe('normalizeSettings', () => {
-  it('migrates a legacy Claude model while defaulting to ChatGPT', () => {
-    expect(normalizeSettings({ model: 'sonnet' })).toEqual({
-      provider: 'openai',
-      models: { openai: '', claude: 'sonnet', local: '' }
+  it('defaults to Claude on Opus', () => {
+    expect(normalizeSettings(undefined)).toEqual({
+      provider: 'claude',
+      models: { openai: '', claude: 'opus', local: '' }
     })
+  })
+
+  it('always runs Claude on Opus, whatever an older version saved', () => {
+    for (const saved of [{ model: 'sonnet' }, { models: { claude: 'haiku' } }, { models: { claude: '' } }]) {
+      expect(normalizeSettings(saved).models.claude).toBe('opus')
+    }
   })
 
   it('rejects unknown persisted provider and model values', () => {
@@ -26,8 +32,8 @@ describe('normalizeSettings', () => {
       provider: 'other',
       models: { openai: '--bad', claude: 'bogus' }
     })).toEqual({
-      provider: 'openai',
-      models: { openai: '', claude: '', local: '' }
+      provider: 'claude',
+      models: { openai: '', claude: 'opus', local: '' }
     })
   })
 
@@ -62,7 +68,7 @@ describe('local provider', () => {
   it('persists a local model choice alongside the others', () => {
     expect(normalizeSettings({ provider: 'local', models: { local: 'mistral:7b' } })).toEqual({
       provider: 'local',
-      models: { openai: '', claude: '', local: 'mistral:7b' }
+      models: { openai: '', claude: 'opus', local: 'mistral:7b' }
     })
   })
 })

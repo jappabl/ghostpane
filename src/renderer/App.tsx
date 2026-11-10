@@ -2,8 +2,7 @@ import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { MarkdownAnswer } from './components/MarkdownAnswer'
 import { ChunkCoalescer } from './chunk-coalescer'
 import { presentAnswer } from './choice-answer'
-import type { AppConfig, RecordingState } from '../shared/ipc'
-import { PROVIDERS } from '../shared/providers'
+import type { AnswerMode } from '../shared/ipc'
 
 // Cap the overlay at ~85% of the screen; taller answers scroll inside.
 const MAX_H = Math.floor((window.screen?.availHeight ?? 900) * 0.85)
@@ -12,23 +11,16 @@ const MAX_H = Math.floor((window.screen?.availHeight ?? 900) * 0.85)
 const STREAM_FLUSH_MS = 60
 
 export function App() {
-  const [prompt, setPrompt] = useState('')
   const [answer, setAnswer] = useState('')
   const [done, setDone] = useState(false)
-  const [status, setStatus] = useState('') // main-driven: '' | '📸 Taking screenshot…' | '💭 Thinking…' …
-  const [recording, setRecording] = useState<RecordingState>({ active: false, elapsedMs: 0 })
+  const [mode, setMode] = useState<AnswerMode>('letter')
   const [error, setError] = useState('')
-  const [config, setConfig] = useState<AppConfig>({ provider: 'openai', model: '', models: [], logPath: '' })
-  const inputRef = useRef<HTMLInputElement>(null)
   const bodyRef = useRef<HTMLDivElement>(null)
   const rootRef = useRef<HTMLDivElement>(null)
   const lastH = useRef(0)
   const streamRef = useRef<ChunkCoalescer | null>(null)
   if (!streamRef.current) {
-    streamRef.current = new ChunkCoalescer(STREAM_FLUSH_MS, (text) => {
-      setStatus('')
-      setAnswer((a) => a + text)
-    })
+    streamRef.current = new ChunkCoalescer(STREAM_FLUSH_MS, (text) => setAnswer((a) => a + text))
   }
 
   // Report the content height to main so the window fits the floating pieces.
@@ -49,14 +41,12 @@ export function App() {
     const stream = streamRef.current!
     window.ghost.onAnswerChunk((c) => stream.push(c.text))
     // Flush the tail the buffer is still holding before the answer settles.
-    window.ghost.onAnswerDone(() => { stream.flush(); setDone(true); setStatus('') })
-    window.ghost.onAnswerError((e) => { stream.reset(); setStatus(''); setError(e.message) })
-    // Main drives status through each phase; a new status starts a fresh answer.
-    window.ghost.onStatus((s) => { if (s) { stream.reset(); setAnswer(''); setDone(false); setError(''); setStatus(s) } else setStatus('') })
-    window.ghost.onRecording(setRecording)
-    window.ghost.onConfig((c) => setConfig(c))
+    window.ghost.onAnswerDone(() => { stream.flush(); setDone(true) })
+    window.ghost.onAnswerError((e) => { stream.reset(); setError(e.message) })
+    // A new status from main means a new ask: start a fresh answer.
+    window.ghost.onStatus((s) => { if (s) { stream.reset(); setAnswer(''); setDone(false); setError('') } })
+    window.ghost.onAnswerMode(setMode)
     window.ghost.onMainEvent((e) => {
-      if (e === 'focus-input') inputRef.current?.focus()
       if (e === 'scroll-up') bodyRef.current?.scrollBy({ top: -140 })
       if (e === 'scroll-down') bodyRef.current?.scrollBy({ top: 140 })
     })
@@ -69,66 +59,18 @@ export function App() {
     if (el) el.scrollTop = el.scrollHeight
   }, [answer])
 
-  const busyUI = Boolean(status || recording.active)
-  // Show the panel only for real output. While it's working, the status signal
-  // is tracked internally (for the busy guard) but nothing is shown on screen.
-  // A multiple-choice answer shows only its letter; its reasoning stays hidden.
-  const view = presentAnswer(answer, done)
+  // Nothing but the answer (or an error) is ever drawn.
+  // A multiple-choice answer shows only its letter (⌘⏎) or the full worked answer (⌘]).
+  const view = presentAnswer(answer, done, mode)
   const hasBody = Boolean(error || view.kind !== 'pending')
-
-  function beginAsk(withScreenshot: boolean) {
-    if (busyUI) return // one at a time — don't stack requests
-    if (!withScreenshot && !prompt.trim()) return
-    streamRef.current!.reset() // drop any tail still buffered from the last answer
-    setAnswer(''); setDone(false); setError(''); setStatus('💭 Thinking…')
-    window.ghost.ask({ prompt, withScreenshot })
-    setPrompt('') // clear the box so it's ready for the next question
-  }
 
   return (
     <div className="root" ref={rootRef} style={{ maxHeight: MAX_H }}>
-      <div className="bar surface">
-        <input
-          ref={inputRef}
-          className="ask"
-          placeholder="Ask anything…"
-          value={prompt}
-          onChange={(e) => setPrompt(e.target.value)}
-          onKeyDown={(e) => { if (e.key === 'Enter') beginAsk(false) }}
-        />
-        <div className="bar-actions">
-          {recording.active && <span className="recording-time">{(recording.elapsedMs / 1000).toFixed(0)}s</span>}
-          <select
-            className="provider"
-            title="Provider"
-            value={config.provider}
-            onChange={(e) => window.ghost.setProvider(e.target.value as AppConfig['provider'])}
-          >
-            {PROVIDERS.map((provider) => (
-              <option key={provider.id} value={provider.id}>{provider.label}</option>
-            ))}
-          </select>
-          <select
-            className="model"
-            title="Model"
-            value={config.model}
-            onChange={(e) => window.ghost.setModel(e.target.value)}
-          >
-            {config.models.map((m) => (
-              <option key={m.id} value={m.id}>{m.label}</option>
-            ))}
-          </select>
-        </div>
-      </div>
-
       {hasBody && (
         <div className="panel surface">
           <div className="panel-body" ref={bodyRef}>
             {error
-              ? <div className="error">
-                  <div className="error-msg">{error}</div>
-                  <div className="error-log">Logs: {config.logPath || '~/Library/Logs/Ghostpane'}</div>
-                </div>
+              ? <div className="error-msg">{error}</div>
               : view.kind === 'letter'
                 ? <div className="choice-letter">{view.letter}</div>
                 : view.kind === 'text' && <MarkdownAnswer answer={view.text} />}

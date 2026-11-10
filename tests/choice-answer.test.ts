@@ -70,3 +70,24 @@ describe('presentAnswer without the marker', () => {
     expect(presentAnswer('Answer: B) 12 meters', true).kind).toBe('text')
   })
 })
+
+describe('presentAnswer in explain mode', () => {
+  it('streams the worked answer without the marker line', () => {
+    expect(presentAnswer('MULTIPLE CHOICE\n3x = 15 so x = 5', false, 'explain'))
+      .toEqual({ kind: 'text', text: '3x = 15 so x = 5' })
+  })
+
+  it('keeps the final answer line instead of collapsing to the letter', () => {
+    expect(presentAnswer('MULTIPLE CHOICE\n3x = 15 so x = 5\n\nAnswer: B', true, 'explain'))
+      .toEqual({ kind: 'text', text: '3x = 15 so x = 5\n\nAnswer: B' })
+  })
+
+  it('holds a possible marker, then shows ordinary text as it streams', () => {
+    expect(presentAnswer('MULTI', false, 'explain')).toEqual({ kind: 'pending' })
+    expect(presentAnswer('Binary search halves', false, 'explain')).toEqual({ kind: 'text', text: 'Binary search halves' })
+  })
+
+  it('shows nothing until the marker line is followed by text', () => {
+    expect(presentAnswer('MULTIPLE CHOICE\n', false, 'explain')).toEqual({ kind: 'pending' })
+  })
+})

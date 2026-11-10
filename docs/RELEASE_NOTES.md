@@ -1,13 +1,15 @@
 # Ghostpane v0.2.4
 
 ### New in v0.2.4
-- **Multiple choice shows just the letter.** For an A–D (or A–E) question,
-  Ghostpane still works the problem out, but shows only the answer letter.
-- **Local models.** Pick a model running in Ollama, LM Studio, Jan, GPT4All,
-  llama.cpp or vLLM. Text-only models can still read your screen through
-  on-device text recognition.
-- **Quieter overlay.** No more status text while it works, and the hotkey hints,
-  status dot and screenshot button are gone. Only the answer appears.
+- **Nothing on screen but the answer.** The bar, the typing box and the model
+  pickers are gone. Ghostpane runs on Claude Opus.
+- **Multiple choice shows just the letter.** Tap `⌘⏎` over an A–D (or A–E)
+  question and Ghostpane works it out, but shows only the answer letter.
+- **`⌘]` explains.** Same screenshot answer, with the reasoning shown.
+- **Fades out on white.** Answer text no longer has a dark outline: it reads on
+  dark backgrounds and is close to invisible on white ones.
+- **`⌘⇧Space` is free again.** It used to focus the typing box, which no longer
+  exists.
 
 ---
 

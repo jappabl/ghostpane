@@ -3,6 +3,7 @@
 // opens with MULTIPLE_CHOICE_MARKER, works the problem, and ends on
 // "Answer: X". The reasoning is hidden; only X is shown.
 import { MULTIPLE_CHOICE_MARKER } from '../shared/answer-format'
+import type { AnswerMode } from '../shared/ipc'
 
 export type AnswerView =
   | { kind: 'pending' }
@@ -32,13 +33,18 @@ function lastLineIsAnswer(text: string): string | null {
   return match && /[A-E]/.test(match[1]) ? match[1] : null
 }
 
-export function presentAnswer(text: string, done: boolean): AnswerView {
+export function presentAnswer(text: string, done: boolean, mode: AnswerMode = 'letter'): AnswerView {
   const marker = MULTIPLE_CHOICE_MARKER.replace(DECORATION, '')
   const firstLine = text.trimStart().split('\n')[0]
   const head = firstLine.replace(DECORATION, '').toUpperCase()
   const firstLineComplete = text.trimStart().includes('\n')
 
   if (head === marker && (firstLineComplete || done)) {
+    // Explain mode shows the whole worked answer, only without the marker.
+    if (mode === 'explain') {
+      const rest = text.trimStart().slice(firstLine.length).trim()
+      return rest ? { kind: 'text', text: rest } : { kind: 'pending' }
+    }
     if (!done) return { kind: 'pending' }
     const letter = lastAnswerLetter(text)
     if (letter) return { kind: 'letter', letter }
@@ -47,7 +53,7 @@ export function presentAnswer(text: string, done: boolean): AnswerView {
   // Could still become the marker: hold it rather than flash it on screen.
   if (!done && marker.startsWith(head)) return { kind: 'pending' }
 
-  if (done) {
+  if (done && mode === 'letter') {
     const letter = lastLineIsAnswer(text)
     if (letter) return { kind: 'letter', letter }
   }

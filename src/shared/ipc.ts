@@ -13,12 +13,17 @@ export const CHANNELS = {
   setProvider: 'renderer:set-provider', // renderer → main: ProviderId
   openExternal: 'renderer:open-external', // renderer → main: validated HTTPS URL
   status: 'main:status',          // main → renderer: status text ('' = clear)
-  recording: 'main:recording'     // main → renderer: RecordingState
+  recording: 'main:recording',    // main → renderer: RecordingState
+  answerMode: 'main:answer-mode'  // main → renderer: AnswerMode for the ask just started
 } as const
 
 export type MainEvent =
-  | 'toggle' | 'ask-screenshot' | 'focus-input'
+  | 'toggle' | 'ask-screenshot' | 'ask-explain'
   | 'scroll-up' | 'scroll-down' | 'toggle-click-through' | 'open-logs' | 'quit'
+
+// 'letter': a multiple-choice answer shows only its letter.
+// 'explain': the whole worked answer is shown.
+export type AnswerMode = 'letter' | 'explain'
 
 export interface AskRequest { prompt: string; withScreenshot: boolean }
 export interface AnswerChunk { text: string }

@@ -11,7 +11,7 @@ import { layoutScreenText } from './screen-text'
 import { modelsForProvider } from '../shared/providers'
 import { initLogger, getLogPath, getLogDir, log } from './logger'
 import { getSettings, setModel, setProvider } from './settings'
-import { CHANNELS, type MainEvent, type AppConfig } from '../shared/ipc'
+import { CHANNELS, type MainEvent, type AppConfig, type AnswerMode } from '../shared/ipc'
 import { OwnedPaths } from './owned-paths'
 import {
   isTrustedSender,
@@ -99,7 +99,9 @@ async function connectLocal() {
 
 const PROVIDER_LABELS = { openai: 'ChatGPT', claude: 'Claude', local: 'your local model' } as const
 
-function runAsk(prompt: string, imagePath?: string) {
+const EXPLAIN_PROMPT = 'Read the question or content on screen, answer it, and explain the reasoning step by step.'
+
+function runAsk(prompt: string, imagePath?: string, mode: AnswerMode = 'letter') {
   busy = true
   const settings = getSettings()
   const owned = new OwnedPaths(undefined, (path, error) => {
@@ -118,6 +120,7 @@ function runAsk(prompt: string, imagePath?: string) {
   send(CHANNELS.status, imagePath
     ? `📸 Asking ${providerLabel} about your screen…`
     : `💭 Asking ${providerLabel}…`)
+  send(CHANNELS.answerMode, mode)
   const helper = nativeHelper
   const local = (options: Parameters<typeof askLocal>[0]) => askLocal({
     ...options,
@@ -239,25 +242,18 @@ async function handleEvent(e: MainEvent) {
     case 'toggle':
       win.isVisible() ? win.hide() : reveal()
       break
-    case 'focus-input':
-      // The ONLY place we deliberately take focus — the user explicitly asked
-      // to type. app.focus({steal}) is needed for a dock-hidden accessory app
-      // to actually receive keystrokes on macOS. Everywhere else stays inactive.
-      applyFollowBehavior(win)
-      win.show()
-      if (process.platform === 'darwin') app.focus({ steal: true })
-      win.focus()
-      send(CHANNELS.mainEvent, 'focus-input')
-      break
     case 'ask-screenshot':
-      if (busy) { log('info', 'ignoring ⌘⏎ — an ask is already in flight'); break }
+    case 'ask-explain':
+      if (busy) { log('info', 'ignoring screenshot ask — an ask is already in flight', { event: e }); break }
       busy = true
       reveal() // make results visible; capture restores this state
       send(CHANNELS.status, '📸 Taking screenshot…')
       try {
         const path = await captureBehindOverlay(win)
         log('info', 'screenshot captured', { path })
-        runAsk('', path) // keeps busy=true, sends its own status, clears on finish
+        // keeps busy=true, sends its own status, clears on finish
+        if (e === 'ask-explain') runAsk(EXPLAIN_PROMPT, path, 'explain')
+        else runAsk('', path)
       } catch (err) {
         onScreenshotError(err) // clears busy
       }

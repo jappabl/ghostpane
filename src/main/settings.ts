@@ -9,7 +9,9 @@ export interface Settings {
   models: Record<ProviderId, string>
 }
 
-const DEFAULTS: Settings = { provider: 'openai', models: { openai: '', claude: '', local: '' } }
+// Claude always runs Opus: there is no model picker in the overlay.
+const CLAUDE_MODEL = 'opus'
+const DEFAULTS: Settings = { provider: 'claude', models: { openai: '', claude: CLAUDE_MODEL, local: '' } }
 let cache: Settings | null = null
 
 function file(): string { return join(app.getPath('userData'), 'settings.json') }
@@ -21,14 +23,11 @@ export function normalizeSettings(raw: unknown): Settings {
   const storedModels = value.models && typeof value.models === 'object'
     ? value.models as Record<string, unknown>
     : {}
-  const legacyClaude = isModelForProvider('claude', value.model) ? value.model : ''
   return {
     provider,
     models: {
       openai: isModelForProvider('openai', storedModels.openai) ? storedModels.openai : '',
-      claude: isModelForProvider('claude', storedModels.claude)
-        ? storedModels.claude
-        : legacyClaude,
+      claude: CLAUDE_MODEL,
       local: isModelForProvider('local', storedModels.local) ? storedModels.local : ''
     }
   }

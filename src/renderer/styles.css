@@ -6,59 +6,16 @@ html, body {
   -webkit-font-smoothing: antialiased;
 }
 
-/* The window resizes to fit .root (see App.tsx). Bar + panel are separate
-   pieces stacked with a gap. */
+/* The window resizes to fit .root (see App.tsx), which holds only the answer. */
 .root {
   display: flex; flex-direction: column; gap: 8px; padding: 10px 14px 16px;
   background: transparent;
-  /* Nothing is painted behind the text, so every glyph has to carry its own
-     contrast: on a white background plain white text disappears. The stroke is
-     painted behind the fill (paint-order), so only about half its width shows
-     as a rim, and it has to be thick enough to read against a white page. */
-  -webkit-text-stroke: 2.6px rgba(0, 0, 0, 0.82);
-  paint-order: stroke fill;
-  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.75);
-}
-/* Small type needs a proportionally thinner rim or it turns to mud. */
-.kbd, .error-log, .recording-time, .model, .provider {
-  -webkit-text-stroke-width: 1.7px;
+  /* No rim or shadow: the text reads on dark backgrounds and washes out on
+     white ones, so it doesn't stand out on a bright screen. */
 }
 
 /* ---- shared surface: fully clear, so only the text reads on screen ---- */
 .surface { background: transparent; border: 0; box-shadow: none; color: #fff; }
-
-/* ---- command bar ---- */
-.bar {
-  display: flex; align-items: center; gap: 10px;
-  height: 46px; padding: 0 8px 0 14px; border-radius: 15px;
-  overflow: hidden;
-  -webkit-app-region: drag; /* grab the bar to move the overlay */
-}
-/* interactive controls must stay clickable, not draggable */
-.ask, .model, .provider { -webkit-app-region: no-drag; }
-
-.ask {
-  flex: 1 1 auto; min-width: 0; height: 100%;
-  background: transparent; border: 0; outline: none;
-  color: #fff; font-size: 14px; letter-spacing: .1px;
-}
-.ask::placeholder { color: rgba(255, 255, 255, 0.55); }
-
-.bar-actions { display: flex; align-items: center; gap: 6px; flex: 0 0 auto; }
-.recording-time {
-  color: #ff9a9e; font-size: 11px; font-variant-numeric: tabular-nums;
-}
-
-/* model picker */
-.model, .provider {
-  appearance: none; -webkit-appearance: none;
-  background: transparent; border: 0;
-  color: rgba(255, 255, 255, 0.85); border-radius: 8px; padding: 5px 6px;
-  font-size: 12px; cursor: pointer; outline: none;
-}
-.model:hover, .provider:hover { background: rgba(255, 255, 255, 0.16); }
-.model option, .provider option { color: #111; }
-.provider { max-width: 86px; }
 
 /* ---- answer panel ---- */
 .panel {
@@ -114,8 +71,5 @@ html, body {
 /* A multiple-choice answer: just the letter. */
 .choice-letter { font-size: 22px; font-weight: 600; line-height: 1.2; }
 
-.error { font-size: 13px; }
-.error-msg { color: #ff8a8a; line-height: 1.5; }
-.error-log { margin-top: 8px; font-size: 11px; color: rgba(255, 255, 255, 0.6);
-  font-family: ui-monospace, SFMono-Regular, Menlo, monospace; word-break: break-all; }
+.error-msg { font-size: 13px; color: #ff8a8a; line-height: 1.5; }
 

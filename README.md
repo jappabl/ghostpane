@@ -2,7 +2,7 @@
 
 <img src="branding/logo.png" alt="ghostpane" width="440" />
 
-**A translucent, screen-share-hidden AI overlay powered by your ChatGPT or Claude subscription.**
+**A screen-share-hidden AI overlay powered by your Claude subscription.**
 
 [![License](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
 [![Release](https://img.shields.io/github/v/release/jappabl/ghostpane?color=8b5cf6)](https://github.com/jappabl/ghostpane/releases/latest)
@@ -13,7 +13,7 @@
 
 </div>
 
-Ghostpane floats a small glass bar over everything you do. Ask a typed question, tap one shortcut for a screenshot, or hold a separate audio shortcut to add microphone and system-audio context. ChatGPT is the default provider and Claude remains one click away. The window is excluded from screen recording and screen sharing, so it does not appear in Zoom, Teams, Meet, QuickTime, or OBS.
+Ghostpane floats answers over everything you do, with no other UI. Tap one shortcut to answer what's on screen, another to get the answer explained, or hold a third to add microphone and system-audio context. Answers come from Claude Opus. The text has no outline, so it reads on dark backgrounds and fades out on white ones. The window is excluded from screen recording and screen sharing, so it does not appear in Zoom, Teams, Meet, QuickTime, or OBS.
 
 It's an open take on the idea behind Cluely and Interview Coder, built entirely on documented macOS APIs.
 
@@ -26,31 +26,28 @@ Using it to deceive someone who has not agreed to it, like a monitored interview
 ## Features
 
 - Excluded from screen shares and recordings on macOS (Zoom, Teams, Meet, screenshots; best-effort against some ScreenCaptureKit recorders and QuickTime).
-- Tap `⌘⏎` for a screenshot answer. Hold `⌘⇧⏎` to record microphone and system audio, transcribe both locally, and answer using a fresh screenshot.
-- Uses your ChatGPT subscription through the Codex CLI by default. Claude Code remains an optional provider. No API key.
+- Tap `⌘⏎` for a screenshot answer. A multiple-choice question shows just the letter. Tap `⌘]` for the same answer with its reasoning. Hold `⌘⇧⏎` to record microphone and system audio, transcribe both locally, and answer using a fresh screenshot.
+- Uses your Claude subscription through Claude Code, on Opus. No API key.
 - Audio recording is strictly press-and-hold. Releasing the keys stops capture; raw temporary audio is deleted after local transcription.
 - Streams answers token by token and grows the window to fit, then shrinks back.
 - Never steals focus, has no Dock or app-switcher entry, and follows you across Spaces and over full-screen apps.
 - Driven entirely by global hotkeys, so you never move the mouse to a window nobody else can see.
-- Switch provider and model from two dropdowns in the bar.
 
 ## Requirements
 
 - A Mac (Apple Silicon or Intel). Held system-audio capture requires macOS 14 or newer.
-- A ChatGPT subscription authenticated with the [Codex CLI](https://developers.openai.com/codex/cli), or an optional Claude subscription authenticated with Claude Code.
+- A Claude subscription signed in to [Claude Code](https://claude.com/claude-code).
 
 ## Quick start
 
-**1. Sign in to ChatGPT through Codex.** In Terminal:
+**1. Sign in to Claude Code.** In Terminal:
 
 ```bash
-npm install -g @openai/codex
-codex login
+curl -fsSL https://claude.ai/install.sh | bash
+claude
 ```
 
-If you already have the ChatGPT macOS app, Ghostpane can use its bundled Codex executable. Run `codex login` once so subscription authentication is ready. To use Claude instead, install Claude Code, run `claude`, then choose Claude from the provider dropdown.
-
-**Or run it all on your machine.** Choose **Local** from the provider dropdown. Ghostpane finds whichever local model server you have — Ollama, LM Studio, llama.cpp, Jan, vLLM or GPT4All — and lists its models. If Ollama or LM Studio is installed but not running, Ghostpane starts it. Screenshots work with any model: for one that can't see images, Ghostpane reads the screen's text on-device and sends that instead. Nothing leaves your Mac. New to local models? `brew install ollama && ollama pull gemma3` gets you one that also understands images and diagrams.
+Choose your Claude subscription (not an API key), sign in, then type `/exit`.
 
 **2. Download Ghostpane.** Grab the right file from the [latest release](https://github.com/jappabl/ghostpane/releases/latest):
 
@@ -69,7 +66,7 @@ xattr -cr /Applications/Ghostpane.app
 
 **5. Grant permissions.** Open Ghostpane and press `⌘⏎` once. For screenshots, enable Screen Recording. For held audio, press `⌘⇧⏎`, then enable Accessibility, Microphone, and Speech Recognition. Quit (`⌘⇧Q`) and reopen after changing them. Ghostpane records only while `⌘⇧⏎` remains held.
 
-That's it. Press `⌘\` to summon the bar and start asking.
+That's it. Put a question on screen and press `⌘⏎`.
 
 ### Or let your AI assistant install it
 
@@ -81,9 +78,8 @@ on this machine.
 
 Repo: https://github.com/jappabl/ghostpane
 
-1. Ask which subscription I have. For ChatGPT run:
-   npm install -g @openai/codex && codex login
-   For Claude, make sure Claude Code is installed and I have run `claude` once.
+1. Make sure Claude Code is installed and I have run `claude` once and
+   signed in with my Claude subscription.
 2. Download the right DMG from
    https://github.com/jappabl/ghostpane/releases/latest
    (arm64 for Apple Silicon, plain .dmg for Intel), open it, and move
@@ -93,9 +89,9 @@ Repo: https://github.com/jappabl/ghostpane
    once to trigger the prompt), and for held audio also Accessibility,
    Microphone, and Speech Recognition. Remind me to quit (cmd+shift+Q) and
    reopen after granting.
-5. Teach me the shortcuts: cmd+\ shows the bar, cmd+shift+space types a
-   question, tap cmd+return answers what is on screen, hold cmd+shift+return
-   adds mic and system audio.
+5. Teach me the shortcuts: cmd+\ shows or hides the overlay, tap cmd+return
+   answers what is on screen, cmd+] answers and explains, hold
+   cmd+shift+return adds mic and system audio.
 6. Remind me to use it responsibly: never in monitored interviews or
    proctored exams.
 ```
@@ -107,15 +103,13 @@ There is no Dock icon by design. Everything runs through global shortcuts:
 | Action | Shortcut |
 | --- | --- |
 | Show / hide the overlay | `⌘ \` |
-| Type a question | `⌘ ⇧ Space`, then Return |
 | Answer what's on screen | Tap `⌘ ⏎` |
+| Answer and explain | Tap `⌘ ]` |
 | Add microphone + system audio | Hold `⌘ ⇧ ⏎`, release to submit |
 | Scroll a long answer | `⌘ ↑` / `⌘ ↓` |
 | Click-through on/off | `⌘ ⇧ \` |
 | Open the logs | `⌘ ⇧ L` |
 | Quit | `⌘ ⇧ Q` |
-
-Pick ChatGPT or Claude and a model from the dropdowns. Both choices are saved.
 
 ## Verify the exclusion yourself
 
@@ -130,7 +124,7 @@ The magic is one OS capability plus some overlay hygiene:
 
 - **Screen-capture exclusion.** `BrowserWindow.setContentProtection(true)` sets the window's macOS `NSWindowSharingType` to `none`, which drops it from the capture pipeline that Zoom, Teams, and OBS read.
 - **Panel window.** The overlay is created as a macOS panel (`NSWindowStyleMaskNonactivatingPanel`) so it can float over other apps' full-screen Spaces, like Spotlight, without stealing focus.
-- **Subscription auth.** The default provider runs `codex exec` with an ephemeral, read-only session; the optional Claude provider runs `claude -p`. Both use the subscription login already stored by their official CLI.
+- **Subscription auth.** Ghostpane runs `claude -p` on Opus, using the subscription login Claude Code already stored.
 - **Local audio context.** A bundled universal Swift helper owns the global hold gesture, captures microphone and system audio with Apple frameworks, transcribes on-device, deletes the recordings, then passes only labeled transcripts and a fresh screenshot to the selected provider.
 
 The code splits cleanly: the Electron main process owns the window, provider routing, screenshots, and a versioned native-helper bridge; a preload script exposes a small typed API; the renderer only draws.
@@ -139,8 +133,6 @@ The code splits cleanly: the Electron main process owns the window, provider rou
 <summary><b>Troubleshooting</b></summary>
 
 **"Ghostpane is damaged and can't be opened."** It isn't. macOS shows this for any non-notarized download. Run `xattr -cr /Applications/Ghostpane.app`, then open it.
-
-**"Codex CLI not found" or "ChatGPT is not signed in."** Run `codex login`, then reopen Ghostpane. You can also switch to Claude from the provider dropdown.
 
 **Holding `⌘⇧⏎` does not record.** Audio needs macOS 14+, plus Accessibility, Microphone, Screen Recording, and Speech Recognition access. Enable Ghostpane in all four Privacy & Security panes, then quit and reopen it. A short tap intentionally does nothing; audio requires a 350 ms hold.
 

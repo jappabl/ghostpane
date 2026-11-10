@@ -1,6 +1,6 @@
 import { contextBridge, ipcRenderer } from 'electron'
 import { CHANNELS } from '../shared/ipc'
-import type { MainEvent, AskRequest, AppConfig, RecordingState } from '../shared/ipc'
+import type { MainEvent, AskRequest, AppConfig, RecordingState, AnswerMode } from '../shared/ipc'
 import type { ProviderId } from '../shared/providers'
 
 const api = {
@@ -18,6 +18,8 @@ const api = {
     ipcRenderer.on(CHANNELS.status, (_e, v) => cb(v)),
   onRecording: (cb: (state: RecordingState) => void) =>
     ipcRenderer.on(CHANNELS.recording, (_e, v) => cb(v)),
+  onAnswerMode: (cb: (mode: AnswerMode) => void) =>
+    ipcRenderer.on(CHANNELS.answerMode, (_e, v) => cb(v)),
   ask: (req: AskRequest) => ipcRenderer.send(CHANNELS.ask, req),
   setClickThrough: (val: boolean) => ipcRenderer.send(CHANNELS.setClickThrough, val),
   setModel: (model: string) => ipcRenderer.send(CHANNELS.setModel, model),

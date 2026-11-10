@@ -17,7 +17,12 @@ describe('overlay surface isolation', () => {
     expect(styles).toMatch(/html, body, #root\s*\{[^}]*background:\s*transparent/s)
     expect(styles).toMatch(/\.root\s*\{[^}]*background:\s*transparent/s)
     expect(styles).not.toContain('0 10px 40px rgba(0, 0, 0, 0.45)')
-    expect(styles).toMatch(/\.bar\s*\{[^}]*overflow:\s*hidden/s)
+  })
+
+  it('draws no UI but the answer, with no rim to read it on white', () => {
+    expect(styles).not.toMatch(/\.bar\s*\{/)
+    expect(styles).not.toContain('-webkit-text-stroke')
+    expect(styles).not.toContain('text-shadow')
   })
 
   it('paints no plate behind the content: the surface is fully clear', () => {
